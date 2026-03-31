@@ -1,10 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/globals.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* MOSTRA Design Tokens */
+  --color-mostra-bg: var(--mostra-bg);
+  --color-mostra-card: var(--mostra-card-bg);
+  --color-mostra-card-hover: var(--mostra-card-bg-hover);
+  --color-mostra-border: var(--mostra-border);
+  --color-mostra-accent: var(--mostra-accent);
+  --color-mostra-accent-hover: var(--mostra-accent-hover);
+  --color-mostra-text-secondary: var(--mostra-text-secondary);
+  --color-mostra-text-muted: var(--mostra-text-muted);
+  --color-status-active: var(--mostra-status-active);
+  --color-status-completed: var(--mostra-status-completed);
+  --color-status-pending: var(--mostra-status-pending);
+  --color-status-in-progress: var(--mostra-status-in-progress);
+  --color-status-in-review: var(--mostra-status-in-review);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
