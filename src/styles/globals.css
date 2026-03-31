@@ -1,0 +1,26 @@
+/*
+ * MOSTRA — Design System
+ * Ce fichier contient les variables CSS custom du thème MOSTRA.
+ * Les variables shadcn/ui sont dans src/app/globals.css (géré par shadcn).
+ * Importer ce fichier dans le layout pour les tokens spécifiques MOSTRA.
+ */
+
+:root {
+  /* MOSTRA Custom Tokens */
+  --mostra-bg: #0a0a0a;
+  --mostra-card-bg: #1a1a1a;
+  --mostra-card-bg-hover: #222222;
+  --mostra-border: #2a2a2a;
+  --mostra-text-primary: #ffffff;
+  --mostra-text-secondary: #a0a0a0;
+  --mostra-text-muted: #666666;
+  --mostra-accent: #EF4444;
+  --mostra-accent-hover: #DC2626;
+
+  /* Status colors */
+  --mostra-status-active: #22C55E;
+  --mostra-status-completed: #22C55E;
+  --mostra-status-pending: #6B7280;
+  --mostra-status-in-progress: #3B82F6;
+  --mostra-status-in-review: #F59E0B;
+}

@@ -1,0 +1,3 @@
+-- MOSTRA — Schema initial
+-- Voir MOSTRA_ARCHITECTURE.md section 3 pour le schéma complet.
+-- À exécuter lors du setup Supabase.

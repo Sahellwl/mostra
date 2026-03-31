@@ -1,0 +1,2 @@
+-- MOSTRA — Seed data (à compléter)
+-- Ce fichier contiendra les données de démo pour le développement.
