@@ -43,17 +43,18 @@ export async function middleware(request: NextRequest) {
 
   // Utilisateur authentifié sur /login ou /register → dashboard selon rôle
   if (user && (pathname === '/login' || pathname === '/register')) {
-    const { data: member } = await supabase
+    const { data: memberData } = await supabase
       .from('agency_members')
       .select('role')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .order('invited_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
+    const role = (memberData as { role: string } | null)?.role ?? null
     const url = request.nextUrl.clone()
-    url.pathname = getDashboardByRole(member?.role ?? null)
+    url.pathname = getDashboardByRole(role)
     url.search = ''
     return NextResponse.redirect(url)
   }

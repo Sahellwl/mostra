@@ -38,40 +38,48 @@ export function useAuth(): UseAuthReturn {
   })
 
   const fetchUserData = useCallback(async (user: User) => {
-    // Récupère profil + member + agence en parallèle
+    // Requêtes séparées pour éviter les problèmes d'inférence TypeScript avec les joins
     const [profileResult, memberResult] = await Promise.all([
       supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single(),
+        .maybeSingle(),
       supabase
         .from('agency_members')
-        .select('*, agencies(*)')
+        .select('id, agency_id, user_id, role, invited_at, accepted_at, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('invited_at', { ascending: false })
         .limit(1)
-        .single(),
+        .maybeSingle(),
     ])
 
-    const profile = profileResult.data ?? null
-    const member = memberResult.data ?? null
+    const profile = profileResult.data as Profile | null
+    const member = memberResult.data as AgencyMember | null
+
+    // Récupère l'agence séparément si un member a été trouvé
+    let agency: Agency | null = null
+    if (member?.agency_id) {
+      const { data } = await supabase
+        .from('agencies')
+        .select('*')
+        .eq('id', member.agency_id)
+        .maybeSingle()
+      agency = data as Agency | null
+    }
 
     setState({
       user,
       profile,
-      member: member
-        ? { ...member, agencies: undefined } as AgencyMember
-        : null,
-      agency: (member as { agencies?: Agency } | null)?.agencies ?? null,
+      member,
+      agency,
       role: (member?.role as UserRole) ?? null,
       loading: false,
     })
   }, [supabase])
 
   useEffect(() => {
-    // Session initiale
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         fetchUserData(user)
@@ -80,7 +88,6 @@ export function useAuth(): UseAuthReturn {
       }
     })
 
-    // Écoute les changements d'état auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.user) {
@@ -104,14 +111,12 @@ export function useAuth(): UseAuthReturn {
   const signIn = useCallback(
     async (email: string, password: string): Promise<{ error: string | null }> => {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           return { error: 'Email ou mot de passe incorrect.' }
         }
         return { error: 'Une erreur est survenue. Veuillez réessayer.' }
       }
-
       return { error: null }
     },
     [supabase]
