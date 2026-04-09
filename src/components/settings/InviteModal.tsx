@@ -18,7 +18,7 @@ const inputClass = `
   w-full px-3 py-2.5 rounded-lg text-sm
   bg-[#0a0a0a] border border-[#2a2a2a] text-white placeholder:text-[#444444]
   outline-none transition-colors
-  focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/30
+  focus:border-[#00D76B] focus:ring-1 focus:ring-[#00D76B]/30
   disabled:opacity-50
 `
 
@@ -96,8 +96,8 @@ export default function InviteModal() {
       <button
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-          bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444]
-          hover:bg-[#EF4444]/20 transition-colors"
+          bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B]
+          hover:bg-[#00D76B]/20 transition-colors"
       >
         <UserPlus className="h-4 w-4" />
         Inviter un membre
@@ -152,7 +152,7 @@ export default function InviteModal() {
                     <button
                       onClick={copyLink}
                       className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm
-                        bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors font-medium"
+                        bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors font-medium"
                     >
                       {linkCopied ? (
                         <>
@@ -225,7 +225,7 @@ export default function InviteModal() {
                         <label
                           key={value}
                           className="relative flex flex-col gap-0.5 p-3 rounded-lg border border-[#2a2a2a] cursor-pointer
-                            has-[:checked]:border-[#EF4444]/40 has-[:checked]:bg-[#EF4444]/5
+                            has-[:checked]:border-[#00D76B]/40 has-[:checked]:bg-[#00D76B]/5
                             hover:border-[#444444] transition-colors"
                         >
                           <input
@@ -260,7 +260,7 @@ export default function InviteModal() {
                       type="submit"
                       disabled={isSubmitting}
                       className="flex-1 py-2.5 rounded-lg text-sm font-medium
-                        bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors
+                        bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors
                         disabled:opacity-60 disabled:cursor-not-allowed
                         flex items-center justify-center gap-2"
                     >

@@ -113,7 +113,7 @@ function SortableRow({ row, index, total, disabled, onUpdate, onRemove }: RowIte
         flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors
         ${
           isDragging
-            ? 'bg-[#1a1a1a] border-[#EF4444]/30 shadow-2xl shadow-black/50'
+            ? 'bg-[#1a1a1a] border-[#00D76B]/30 shadow-2xl shadow-black/50'
             : 'bg-[#111111] border-[#2a2a2a] hover:border-[#333333]'
         }
       `}
@@ -152,7 +152,7 @@ function SortableRow({ row, index, total, disabled, onUpdate, onRemove }: RowIte
           flex-1 px-3 py-1.5 rounded-lg text-sm
           bg-[#0a0a0a] border border-[#2a2a2a] text-white placeholder:text-[#333333]
           outline-none transition-colors
-          focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/30
+          focus:border-[#00D76B] focus:ring-1 focus:ring-[#00D76B]/30
           disabled:opacity-50
         "
       />
@@ -376,7 +376,7 @@ export default function DraggablePhaseList({ initialTemplates }: Props) {
             disabled={isPending || !isDirty}
             className="
               inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium
-              bg-[#EF4444] text-white hover:bg-[#DC2626] active:bg-[#B91C1C]
+              bg-[#00D76B] text-white hover:bg-[#00C061] active:bg-[#009E50]
               transition-colors disabled:opacity-50 disabled:cursor-not-allowed
             "
           >
@@ -433,7 +433,7 @@ export default function DraggablePhaseList({ initialTemplates }: Props) {
         className="
           w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm
           border border-dashed border-[#2a2a2a] text-[#555555]
-          hover:border-[#EF4444]/30 hover:text-[#EF4444] hover:bg-[#EF4444]/5
+          hover:border-[#00D76B]/30 hover:text-[#00D76B] hover:bg-[#00D76B]/5
           transition-colors disabled:opacity-40
         "
       >
@@ -451,7 +451,7 @@ export default function DraggablePhaseList({ initialTemplates }: Props) {
               onClick={handleSave}
               disabled={isPending}
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium
-                bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors
+                bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors
                 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

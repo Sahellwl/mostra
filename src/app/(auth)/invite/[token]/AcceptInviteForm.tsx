@@ -25,7 +25,7 @@ const inputClass = `
   w-full px-3 py-2.5 rounded-lg text-sm
   bg-[#111111] border border-[#2a2a2a] text-white placeholder:text-[#444444]
   outline-none transition-colors
-  focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/30
+  focus:border-[#00D76B] focus:ring-1 focus:ring-[#00D76B]/30
   disabled:opacity-50
 `
 
@@ -67,7 +67,7 @@ export default function AcceptInviteForm({ token, email }: { token: string; emai
       {/* Nom */}
       <div>
         <label className="block text-xs font-medium text-[#a0a0a0] mb-1.5">
-          Nom complet <span className="text-[#EF4444]">*</span>
+          Nom complet <span className="text-[#00D76B]">*</span>
         </label>
         <input
           type="text"
@@ -84,7 +84,7 @@ export default function AcceptInviteForm({ token, email }: { token: string; emai
       {/* Mot de passe */}
       <div>
         <label className="block text-xs font-medium text-[#a0a0a0] mb-1.5">
-          Mot de passe <span className="text-[#EF4444]">*</span>
+          Mot de passe <span className="text-[#00D76B]">*</span>
         </label>
         <div className="relative">
           <input
@@ -110,7 +110,7 @@ export default function AcceptInviteForm({ token, email }: { token: string; emai
       {/* Confirmation */}
       <div>
         <label className="block text-xs font-medium text-[#a0a0a0] mb-1.5">
-          Confirmer le mot de passe <span className="text-[#EF4444]">*</span>
+          Confirmer le mot de passe <span className="text-[#00D76B]">*</span>
         </label>
         <div className="relative">
           <input
@@ -145,7 +145,7 @@ export default function AcceptInviteForm({ token, email }: { token: string; emai
         type="submit"
         disabled={isSubmitting}
         className="w-full py-2.5 rounded-lg text-sm font-medium
-          bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors
+          bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors
           disabled:opacity-60 disabled:cursor-not-allowed
           flex items-center justify-center gap-2 mt-2"
       >

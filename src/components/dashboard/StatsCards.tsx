@@ -11,8 +11,8 @@ const CARDS = (stats: StatsCardsProps) => [
     label: 'Total Projects',
     value: stats.total,
     icon: FolderOpen,
-    iconColor: 'text-[#EF4444]',
-    iconBg: 'bg-[#EF4444]/10',
+    iconColor: 'text-[#00D76B]',
+    iconBg: 'bg-[#00D76B]/10',
   },
   {
     label: 'Active Projects',

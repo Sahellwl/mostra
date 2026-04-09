@@ -92,7 +92,7 @@ export default function IconPicker({ value, onChange, disabled }: Props) {
           w-9 h-9 rounded-lg border flex items-center justify-center transition-colors
           ${
             open
-              ? 'border-[#EF4444]/40 bg-[#EF4444]/10 text-[#EF4444]'
+              ? 'border-[#00D76B]/40 bg-[#00D76B]/10 text-[#00D76B]'
               : 'border-[#2a2a2a] bg-[#111111] text-[#666666] hover:border-[#444444] hover:text-white'
           }
           disabled:opacity-40 disabled:cursor-not-allowed
@@ -121,7 +121,7 @@ export default function IconPicker({ value, onChange, disabled }: Props) {
                 w-8 h-8 rounded-lg flex items-center justify-center transition-colors
                 ${
                   value === name
-                    ? 'bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30'
+                    ? 'bg-[#00D76B]/20 text-[#00D76B] border border-[#00D76B]/30'
                     : 'text-[#555555] hover:text-white hover:bg-[#1a1a1a] border border-transparent'
                 }
               `}

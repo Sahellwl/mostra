@@ -53,7 +53,7 @@ export default function Sidebar() {
         <div className="px-5 py-6 border-b border-[#2a2a2a] flex items-center justify-between">
           <div>
             <span className="text-[15px] font-bold tracking-[0.3em] text-white select-none">
-              MO<span className="text-[#EF4444]">ST</span>RA
+              MO<span className="text-[#00D76B]">ST</span>RA
             </span>
             <p className="mt-0.5 text-[10px] tracking-widest text-[#444444] uppercase">Studio</p>
           </div>
@@ -81,12 +81,12 @@ export default function Sidebar() {
                   flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
                   ${
                     isActive
-                      ? 'bg-[#EF4444]/10 text-[#EF4444] font-medium'
+                      ? 'bg-[#00D76B]/10 text-[#00D76B] font-medium'
                       : 'text-[#a0a0a0] hover:text-white hover:bg-[#1a1a1a]'
                   }
                 `}
               >
-                <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-[#EF4444]' : ''}`} />
+                <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-[#00D76B]' : ''}`} />
                 {label}
               </Link>
             )

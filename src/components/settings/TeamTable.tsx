@@ -30,7 +30,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  super_admin: 'text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/20',
+  super_admin: 'text-[#00D76B] bg-[#00D76B]/10 border-[#00D76B]/20',
   agency_admin: 'text-[#F59E0B] bg-[#F59E0B]/10 border-[#F59E0B]/20',
   creative: 'text-[#3B82F6] bg-[#3B82F6]/10 border-[#3B82F6]/20',
   client: 'text-[#555555] bg-[#1a1a1a] border-[#2a2a2a]',
@@ -72,13 +72,13 @@ export default function TeamTable({ members, currentUserId, currentUserRole, isA
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
               ${
                 filter === value
-                  ? 'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20'
+                  ? 'bg-[#00D76B]/10 text-[#00D76B] border border-[#00D76B]/20'
                   : 'text-[#666666] hover:text-white border border-transparent hover:border-[#2a2a2a]'
               }`}
           >
             {label}
             <span
-              className={`ml-1.5 text-[10px] ${filter === value ? 'text-[#EF4444]/60' : 'text-[#444444]'}`}
+              className={`ml-1.5 text-[10px] ${filter === value ? 'text-[#00D76B]/60' : 'text-[#444444]'}`}
             >
               {value === 'all'
                 ? members.length

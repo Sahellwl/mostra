@@ -143,7 +143,7 @@ export default function CommentSection({
       <div className="flex items-center gap-2 mb-3">
         <h2 className="text-sm font-semibold text-white">Commentaires</h2>
         {activeCount > 0 && (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#EF4444]/10 text-[#EF4444] text-[10px] font-bold">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#00D76B]/10 text-[#00D76B] text-[10px] font-bold">
             {activeCount}
           </span>
         )}
@@ -161,7 +161,7 @@ export default function CommentSection({
               className="
                 w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-3 py-2
                 text-xs text-white placeholder-[#3a3a3a] resize-none
-                focus:outline-none focus:border-[#EF4444]/30 transition-colors
+                focus:outline-none focus:border-[#00D76B]/30 transition-colors
               "
             />
             {errors.content && (
@@ -174,7 +174,7 @@ export default function CommentSection({
                   {...register('phaseId')}
                   className="
                     bg-[#0d0d0d] border border-[#2a2a2a] rounded-lg px-2 py-1.5
-                    text-[10px] text-[#666666] focus:outline-none focus:border-[#EF4444]/30
+                    text-[10px] text-[#666666] focus:outline-none focus:border-[#00D76B]/30
                     cursor-pointer transition-colors
                   "
                 >
@@ -200,8 +200,8 @@ export default function CommentSection({
                   disabled={submitting}
                   className="
                     inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                    bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444]
-                    hover:bg-[#EF4444]/20 transition-colors
+                    bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B]
+                    hover:bg-[#00D76B]/20 transition-colors
                     disabled:opacity-50 disabled:cursor-not-allowed
                   "
                 >
@@ -296,8 +296,8 @@ function CommentRow({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           {/* Avatar initiale */}
-          <div className="w-6 h-6 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-[9px] font-bold text-[#EF4444]">
+          <div className="w-6 h-6 rounded-full bg-[#00D76B]/10 border border-[#00D76B]/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-[9px] font-bold text-[#00D76B]">
               {(comment.author?.full_name ?? '?')[0].toUpperCase()}
             </span>
           </div>
@@ -460,7 +460,7 @@ function ReplyFormInline({
         className="
           w-full mt-2 bg-[#111111] border border-[#2a2a2a] rounded-lg px-3 py-2
           text-xs text-white placeholder-[#3a3a3a] resize-none
-          focus:outline-none focus:border-[#EF4444]/30 transition-colors
+          focus:outline-none focus:border-[#00D76B]/30 transition-colors
         "
       />
       {errors.content && (
@@ -479,8 +479,8 @@ function ReplyFormInline({
           disabled={submitting}
           className="
             inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium
-            bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444]
-            hover:bg-[#EF4444]/20 transition-colors
+            bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B]
+            hover:bg-[#00D76B]/20 transition-colors
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >

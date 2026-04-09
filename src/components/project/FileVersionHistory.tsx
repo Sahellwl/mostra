@@ -72,7 +72,7 @@ function FileRow({ file }: { file: PhaseFile }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs text-white truncate max-w-[180px]">{file.file_name}</span>
           {file.is_current && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#00D76B]/10 text-[#00D76B] border border-[#00D76B]/20">
               Current
             </span>
           )}

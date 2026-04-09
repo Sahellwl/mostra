@@ -53,7 +53,7 @@ export default function ProjectInfo({ project, client, projectManager }: Project
               cy="24"
               r="19"
               fill="none"
-              stroke="#EF4444"
+              stroke="#00D76B"
               strokeWidth="4"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 19}`}

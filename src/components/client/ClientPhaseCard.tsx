@@ -131,8 +131,8 @@ export default function ClientPhaseCard({ phase, token, isFirst, isLast }: Clien
               href={viewHref}
               className="
                 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444]
-                hover:bg-[#EF4444]/20 transition-colors
+                bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B]
+                hover:bg-[#00D76B]/20 transition-colors
               "
             >
               <Eye className="h-3.5 w-3.5" />

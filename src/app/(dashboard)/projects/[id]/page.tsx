@@ -80,7 +80,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             </div>
             <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#EF4444] rounded-full transition-all duration-500"
+                className="h-full bg-[#00D76B] rounded-full transition-all duration-500"
                 style={{ width: `${project.progress}%` }}
               />
             </div>

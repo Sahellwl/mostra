@@ -63,8 +63,8 @@ export default function ContactManager({ projectManager }: ContactManagerProps) 
               className="w-12 h-12 rounded-full object-cover border border-[#2a2a2a]"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold text-[#EF4444]">{initials}</span>
+            <div className="w-12 h-12 rounded-full bg-[#00D76B]/10 border border-[#00D76B]/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-[#00D76B]">{initials}</span>
             </div>
           )}
           <div className="min-w-0">
@@ -87,7 +87,7 @@ export default function ContactManager({ projectManager }: ContactManagerProps) 
           className="
             flex items-center justify-center gap-2
             w-full px-4 py-2.5 rounded-lg text-sm font-medium
-            bg-[#EF4444] hover:bg-[#DC2626] text-white
+            bg-[#00D76B] hover:bg-[#00C061] text-white
             transition-colors
           "
         >

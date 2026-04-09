@@ -6,20 +6,20 @@
  */
 
 :root {
-  /* MOSTRA Custom Tokens */
-  --mostra-bg: #0a0a0a;
-  --mostra-card-bg: #1a1a1a;
-  --mostra-card-bg-hover: #222222;
-  --mostra-border: #2a2a2a;
+  /* MOSTRA Custom Tokens — Charte graphique officielle */
+  --mostra-bg: #070707;
+  --mostra-card-bg: #0f0f0f;
+  --mostra-card-bg-hover: #171717;
+  --mostra-border: #1f1f1f;
   --mostra-text-primary: #ffffff;
   --mostra-text-secondary: #a0a0a0;
   --mostra-text-muted: #666666;
-  --mostra-accent: #EF4444;
-  --mostra-accent-hover: #DC2626;
+  --mostra-accent: #00D76B;
+  --mostra-accent-hover: #00C061;
 
   /* Status colors */
-  --mostra-status-active: #22C55E;
-  --mostra-status-completed: #22C55E;
+  --mostra-status-active: #00D76B;
+  --mostra-status-completed: #00D76B;
   --mostra-status-pending: #6B7280;
   --mostra-status-in-progress: #3B82F6;
   --mostra-status-in-review: #F59E0B;

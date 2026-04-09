@@ -89,7 +89,7 @@ export default function FileViewer({
               className="
                 appearance-none bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg
                 pl-3 pr-7 py-1.5 text-xs text-white
-                hover:border-[#3a3a3a] focus:outline-none focus:border-[#EF4444]/50
+                hover:border-[#3a3a3a] focus:outline-none focus:border-[#00D76B]/50
                 cursor-pointer
               "
             >
@@ -165,7 +165,7 @@ export default function FileViewer({
                   w-full text-left px-3 py-2 rounded-lg border transition-colors
                   ${
                     f.version === activeVersion
-                      ? 'bg-[#1a1a1a] border-[#EF4444]/30 text-white'
+                      ? 'bg-[#1a1a1a] border-[#00D76B]/30 text-white'
                       : 'border-[#1e1e1e] text-[#666666] hover:text-white hover:border-[#2a2a2a]'
                   }
                 `}
@@ -173,7 +173,7 @@ export default function FileViewer({
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium">v{f.version}</span>
                   {f.is_current && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#00D76B]/10 text-[#00D76B] border border-[#00D76B]/20">
                       Current
                     </span>
                   )}
@@ -256,7 +256,7 @@ function FilePreview({
       <button
         type="button"
         onClick={onDownload}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20 text-sm text-[#EF4444] hover:bg-[#EF4444]/20 transition-colors"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#00D76B]/10 border border-[#00D76B]/20 text-sm text-[#00D76B] hover:bg-[#00D76B]/20 transition-colors"
       >
         <Download className="h-4 w-4" />
         Télécharger

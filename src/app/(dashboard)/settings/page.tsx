@@ -30,7 +30,7 @@ export default async function SettingsPage() {
         name: agency.name,
         slug: agency.slug,
         logo_url: agency.logo_url ?? null,
-        primary_color: agency.primary_color ?? '#EF4444',
+        primary_color: agency.primary_color ?? '#00D76B',
       }}
       canEdit={canEdit}
     />

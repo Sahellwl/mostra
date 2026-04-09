@@ -64,7 +64,7 @@ export default function NewAgencyForm() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { primaryColor: '#EF4444' },
+    defaultValues: { primaryColor: '#00D76B' },
   })
 
   // Slug auto-generated from name
@@ -167,7 +167,7 @@ export default function NewAgencyForm() {
         {/* Nom */}
         <div>
           <label className="block text-xs font-medium text-[#6b6b9a] mb-1.5">
-            Nom <span className="text-[#EF4444]">*</span>
+            Nom <span className="text-[#00D76B]">*</span>
           </label>
           <input
             type="text"
@@ -184,7 +184,7 @@ export default function NewAgencyForm() {
         {/* Slug */}
         <div>
           <label className="block text-xs font-medium text-[#6b6b9a] mb-1.5">
-            Slug <span className="text-[#EF4444]">*</span>
+            Slug <span className="text-[#00D76B]">*</span>
           </label>
           <input
             type="text"
@@ -229,7 +229,7 @@ export default function NewAgencyForm() {
         {/* Admin name */}
         <div>
           <label className="block text-xs font-medium text-[#6b6b9a] mb-1.5">
-            Nom complet <span className="text-[#EF4444]">*</span>
+            Nom complet <span className="text-[#00D76B]">*</span>
           </label>
           <input
             type="text"
@@ -244,7 +244,7 @@ export default function NewAgencyForm() {
         {/* Admin email */}
         <div>
           <label className="block text-xs font-medium text-[#6b6b9a] mb-1.5">
-            Email <span className="text-[#EF4444]">*</span>
+            Email <span className="text-[#00D76B]">*</span>
           </label>
           <input
             type="email"

@@ -51,8 +51,8 @@ export default async function ClientsPage() {
             href="/clients/new"
             className="
               inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-              bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444]
-              hover:bg-[#EF4444]/20 transition-colors flex-shrink-0
+              bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B]
+              hover:bg-[#00D76B]/20 transition-colors flex-shrink-0
             "
           >
             <UserPlus className="h-4 w-4" />
@@ -81,7 +81,7 @@ export default async function ClientsPage() {
             title="Aucun client pour l'instant."
             action={
               isAdmin ? (
-                <Link href="/clients/new" className="text-xs text-[#EF4444] hover:underline">
+                <Link href="/clients/new" className="text-xs text-[#00D76B] hover:underline">
                   Ajouter le premier client →
                 </Link>
               ) : undefined
@@ -104,8 +104,8 @@ export default async function ClientsPage() {
               >
                 {/* Identité */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[11px] font-bold text-[#EF4444]">
+                  <div className="w-8 h-8 rounded-full bg-[#00D76B]/10 border border-[#00D76B]/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[11px] font-bold text-[#00D76B]">
                       {client.fullName[0]?.toUpperCase() ?? '?'}
                     </span>
                   </div>

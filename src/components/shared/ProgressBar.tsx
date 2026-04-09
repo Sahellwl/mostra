@@ -18,7 +18,7 @@ export default function ProgressBar({
     <div className={`flex items-center gap-3 ${className}`}>
       <div className={`flex-1 ${height} bg-[#2a2a2a] rounded-full overflow-hidden`}>
         <div
-          className="h-full bg-[#EF4444] rounded-full transition-all duration-300"
+          className="h-full bg-[#00D76B] rounded-full transition-all duration-300"
           style={{ width: `${clamped}%` }}
         />
       </div>

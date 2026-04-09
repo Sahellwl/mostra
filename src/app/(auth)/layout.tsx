@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Logo */}
         <div className="text-center mb-8">
           <span className="text-3xl font-bold tracking-widest text-white">
-            MO<span className="text-[#EF4444]">ST</span>RA
+            MO<span className="text-[#00D76B]">ST</span>RA
           </span>
           <p className="mt-1 text-sm text-[#666666]">Production Management</p>
         </div>

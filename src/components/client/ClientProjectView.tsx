@@ -40,7 +40,7 @@ export default function ClientProjectView({ project, phases, token }: ClientProj
         {/* Barre de progression */}
         <div className="h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#EF4444] rounded-full transition-all duration-700"
+            className="h-full bg-[#00D76B] rounded-full transition-all duration-700"
             style={{ width: `${project.progress}%` }}
           />
         </div>
@@ -56,7 +56,7 @@ export default function ClientProjectView({ project, phases, token }: ClientProj
                   key={phase.id}
                   className="flex-1 h-1 rounded-full transition-colors"
                   style={{
-                    backgroundColor: isDone ? '#22C55E' : isActive ? '#EF4444' : '#2a2a2a',
+                    backgroundColor: isDone ? '#22C55E' : isActive ? '#00D76B' : '#2a2a2a',
                   }}
                   title={phase.name}
                 />

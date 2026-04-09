@@ -84,7 +84,7 @@ export default function PhaseCard({
         {!isLast && (
           <div
             className="absolute left-[19px] top-[40px] bottom-[-12px] w-px"
-            style={{ background: isDone ? '#EF4444' : '#2a2a2a' }}
+            style={{ background: isDone ? '#00D76B' : '#2a2a2a' }}
           />
         )}
 
@@ -94,14 +94,14 @@ export default function PhaseCard({
             relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors
             ${
               isDone
-                ? 'bg-[#EF4444]/10 border-[#EF4444]'
+                ? 'bg-[#00D76B]/10 border-[#00D76B]'
                 : isActive
-                  ? 'bg-[#1a1a1a] border-[#EF4444]'
+                  ? 'bg-[#1a1a1a] border-[#00D76B]'
                   : 'bg-[#111111] border-[#2a2a2a]'
             }
           `}
         >
-          <Icon className={`h-4 w-4 ${isDone || isActive ? 'text-[#EF4444]' : 'text-[#444444]'}`} />
+          <Icon className={`h-4 w-4 ${isDone || isActive ? 'text-[#00D76B]' : 'text-[#444444]'}`} />
         </div>
 
         {/* Contenu */}
@@ -195,7 +195,7 @@ function PhaseActions({
   const btnBase =
     'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
   const btnGhost = `${btnBase} border border-[#2a2a2a] text-[#a0a0a0] hover:text-white hover:border-[#444444]`
-  const btnPrimary = `${btnBase} bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/20`
+  const btnPrimary = `${btnBase} bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B] hover:bg-[#00D76B]/20`
   const btnGreen = `${btnBase} bg-[#22C55E]/10 border border-[#22C55E]/20 text-[#22C55E] hover:bg-[#22C55E]/20`
 
   const busy = loading !== null

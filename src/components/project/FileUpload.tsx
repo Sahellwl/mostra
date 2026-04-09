@@ -131,7 +131,7 @@ export default function FileUpload({ phaseId, projectId, phaseSlug, onComplete }
         </div>
         <div className="h-1 bg-[#2a2a2a] rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#EF4444] rounded-full transition-all duration-200"
+            className="h-full bg-[#00D76B] rounded-full transition-all duration-200"
             style={{ width: `${state.progress}%` }}
           />
         </div>
@@ -167,7 +167,7 @@ export default function FileUpload({ phaseId, projectId, phaseSlug, onComplete }
           <button
             type="button"
             onClick={handleUpload}
-            className="flex-1 py-2 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20 text-xs text-[#EF4444] hover:bg-[#EF4444]/20 transition-colors"
+            className="flex-1 py-2 rounded-lg bg-[#00D76B]/10 border border-[#00D76B]/20 text-xs text-[#00D76B] hover:bg-[#00D76B]/20 transition-colors"
           >
             Uploader
           </button>
@@ -189,7 +189,7 @@ export default function FileUpload({ phaseId, projectId, phaseSlug, onComplete }
           border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer
           ${
             dragging
-              ? 'border-[#EF4444] bg-[#EF4444]/5'
+              ? 'border-[#00D76B] bg-[#00D76B]/5'
               : 'border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-[#111111]'
           }
         `}
@@ -205,7 +205,7 @@ export default function FileUpload({ phaseId, projectId, phaseSlug, onComplete }
         }}
       >
         <UploadCloud
-          className={`h-8 w-8 mx-auto mb-2 ${dragging ? 'text-[#EF4444]' : 'text-[#444444]'}`}
+          className={`h-8 w-8 mx-auto mb-2 ${dragging ? 'text-[#00D76B]' : 'text-[#444444]'}`}
         />
         <p className="text-xs text-[#666666]">
           Glissez un fichier ici ou <span className="text-white underline">parcourez</span>

@@ -29,7 +29,7 @@ const ACTION_COLORS: Partial<Record<ActivityAction, string>> = {
   phase_completed: 'bg-[#22C55E]',
   phase_approved: 'bg-[#22C55E]',
   phase_review: 'bg-[#F59E0B]',
-  project_created: 'bg-[#EF4444]',
+  project_created: 'bg-[#00D76B]',
   comment_added: 'bg-[#6B7280]',
 }
 
@@ -75,7 +75,7 @@ export default function ActivityLog({ activity: initial, projectId }: ActivityLo
         {activity.map((entry, i) => {
           const label = ACTION_LABELS[entry.action] ?? entry.action
           const detail = getDetail(entry)
-          const dotColor = ACTION_COLORS[entry.action] ?? 'bg-[#EF4444]'
+          const dotColor = ACTION_COLORS[entry.action] ?? 'bg-[#00D76B]'
           const isLast = i === activity.length - 1
           const isNew = newIds.has(entry.id)
 

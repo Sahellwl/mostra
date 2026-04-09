@@ -99,7 +99,7 @@ export default async function InvitePage({ params }: { params: { token: string }
         <h1 className="text-lg font-bold text-white">{state.agencyName}</h1>
         <div className="mt-2 flex items-center gap-2">
           <span className="text-xs text-[#666666]">en tant que</span>
-          <span className="text-xs font-medium text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/20 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-medium text-[#00D76B] bg-[#00D76B]/10 border border-[#00D76B]/20 px-2 py-0.5 rounded-full">
             {ROLE_LABELS[state.role] ?? state.role}
           </span>
         </div>

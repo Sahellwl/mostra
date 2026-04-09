@@ -84,8 +84,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
       <div className="bg-[#111111] border border-[#2a2a2a] rounded-xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg font-bold text-[#EF4444]">
+            <div className="w-12 h-12 rounded-full bg-[#00D76B]/10 border border-[#00D76B]/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg font-bold text-[#00D76B]">
                 {(profile.full_name as string)[0]?.toUpperCase() ?? '?'}
               </span>
             </div>
@@ -164,7 +164,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex-1 max-w-[120px] h-1.5 bg-[#2a2a2a] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#EF4444] rounded-full"
+                          className="h-full bg-[#00D76B] rounded-full"
                           style={{ width: `${project.progress ?? 0}%` }}
                         />
                       </div>

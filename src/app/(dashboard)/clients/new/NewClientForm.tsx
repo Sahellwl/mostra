@@ -41,7 +41,7 @@ const inputClass = `
   w-full px-3 py-2.5 rounded-lg text-sm
   bg-[#111111] border border-[#2a2a2a] text-white placeholder:text-[#444444]
   outline-none transition-colors
-  focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/30
+  focus:border-[#00D76B] focus:ring-1 focus:ring-[#00D76B]/30
   disabled:opacity-50
 `
 
@@ -49,7 +49,7 @@ const selectClass = `
   w-full px-3 py-2.5 rounded-lg text-sm
   bg-[#111111] border border-[#2a2a2a] text-white
   outline-none transition-colors
-  focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/30
+  focus:border-[#00D76B] focus:ring-1 focus:ring-[#00D76B]/30
   disabled:opacity-50
 `
 
@@ -109,7 +109,7 @@ export default function NewClientForm() {
         {/* ── Nom ── */}
         <div>
           <Label htmlFor="fullName">
-            Nom complet <span className="text-[#EF4444]">*</span>
+            Nom complet <span className="text-[#00D76B]">*</span>
           </Label>
           <input
             id="fullName"
@@ -125,7 +125,7 @@ export default function NewClientForm() {
         {/* ── Email ── */}
         <div>
           <Label htmlFor="email">
-            Email <span className="text-[#EF4444]">*</span>
+            Email <span className="text-[#00D76B]">*</span>
           </Label>
           <input
             id="email"
@@ -189,7 +189,7 @@ export default function NewClientForm() {
             type="submit"
             disabled={isSubmitting}
             className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium
-              bg-[#EF4444] text-white hover:bg-[#DC2626] active:bg-[#B91C1C]
+              bg-[#00D76B] text-white hover:bg-[#00C061] active:bg-[#009E50]
               transition-colors disabled:opacity-60 disabled:cursor-not-allowed
               flex items-center justify-center gap-2"
           >

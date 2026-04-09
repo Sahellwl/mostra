@@ -33,7 +33,7 @@ export default function DashboardClient({ projects, stats }: Props) {
         </div>
         <Link
           href="/projects/new"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors"
         >
           <Plus className="h-4 w-4" />
           Nouveau projet
@@ -64,7 +64,7 @@ export default function DashboardClient({ projects, stats }: Props) {
             search ? (
               <button
                 onClick={() => setSearch('')}
-                className="text-xs text-[#EF4444] hover:text-[#DC2626] transition-colors"
+                className="text-xs text-[#00D76B] hover:text-[#00C061] transition-colors"
               >
                 Effacer la recherche
               </button>

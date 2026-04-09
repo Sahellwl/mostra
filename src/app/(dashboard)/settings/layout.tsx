@@ -76,7 +76,7 @@ function SettingsNavLink({
       href={href}
       className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-t-lg transition-colors
         text-[#666666] hover:text-white hover:bg-[#111111]
-        [&.active]:text-white [&.active]:border-b-2 [&.active]:border-[#EF4444] [&.active]:bg-transparent"
+        [&.active]:text-white [&.active]:border-b-2 [&.active]:border-[#00D76B] [&.active]:bg-transparent"
     >
       <Icon className="h-3.5 w-3.5" />
       {label}

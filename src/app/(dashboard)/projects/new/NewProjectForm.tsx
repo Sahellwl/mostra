@@ -64,7 +64,7 @@ const inputClass = `
   w-full px-3 py-2.5 rounded-lg text-sm
   bg-[#111111] border border-[#2a2a2a] text-white placeholder:text-[#444444]
   outline-none transition-colors
-  focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/30
+  focus:border-[#00D76B] focus:ring-1 focus:ring-[#00D76B]/30
   disabled:opacity-50
 `
 
@@ -72,7 +72,7 @@ const selectClass = `
   w-full px-3 py-2.5 rounded-lg text-sm
   bg-[#111111] border border-[#2a2a2a] text-white
   outline-none transition-colors
-  focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/30
+  focus:border-[#00D76B] focus:ring-1 focus:ring-[#00D76B]/30
   disabled:opacity-50
 `
 
@@ -136,7 +136,7 @@ export default function NewProjectForm({ clients, creatives }: Props) {
         {/* ── Nom du projet ── */}
         <div>
           <Label htmlFor="name">
-            Nom du projet <span className="text-[#EF4444]">*</span>
+            Nom du projet <span className="text-[#00D76B]">*</span>
           </Label>
           <input
             id="name"
@@ -182,7 +182,7 @@ export default function NewProjectForm({ clients, creatives }: Props) {
                   flex-1 text-center py-2 text-sm cursor-pointer transition-colors select-none
                   ${
                     clientMode === value
-                      ? 'bg-[#EF4444]/10 text-[#EF4444] font-medium border-b-2 border-[#EF4444]'
+                      ? 'bg-[#00D76B]/10 text-[#00D76B] font-medium border-b-2 border-[#00D76B]'
                       : 'text-[#666666] hover:text-[#a0a0a0] hover:bg-[#1a1a1a]'
                   }
                 `}
@@ -292,7 +292,7 @@ export default function NewProjectForm({ clients, creatives }: Props) {
             type="submit"
             disabled={isSubmitting}
             className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium
-              bg-[#EF4444] text-white hover:bg-[#DC2626] active:bg-[#B91C1C]
+              bg-[#00D76B] text-white hover:bg-[#00C061] active:bg-[#009E50]
               transition-colors disabled:opacity-60 disabled:cursor-not-allowed
               flex items-center justify-center gap-2"
           >

@@ -21,7 +21,7 @@ interface Props {
 const inputClass = `
   w-full px-3 py-2.5 rounded-lg text-sm
   bg-[#111111] border border-[#2a2a2a] text-white placeholder:text-[#444444]
-  outline-none transition-colors focus:border-[#EF4444]/50 focus:ring-1 focus:ring-[#EF4444]/20
+  outline-none transition-colors focus:border-[#00D76B]/50 focus:ring-1 focus:ring-[#00D76B]/20
   disabled:opacity-40 disabled:cursor-not-allowed
 `
 
@@ -220,7 +220,7 @@ export default function AgencySettingsForm({ agency, canEdit }: Props) {
               }}
               disabled={!canEdit || isPending}
               className={`${inputClass} flex-1 font-mono`}
-              placeholder="#EF4444"
+              placeholder="#00D76B"
             />
             {/* Aperçu */}
             <div
@@ -285,7 +285,7 @@ export default function AgencySettingsForm({ agency, canEdit }: Props) {
             type="submit"
             disabled={isPending}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium
-              bg-[#EF4444] text-white hover:bg-[#DC2626] active:bg-[#B91C1C]
+              bg-[#00D76B] text-white hover:bg-[#00C061] active:bg-[#009E50]
               transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}

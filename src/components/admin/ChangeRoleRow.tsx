@@ -13,7 +13,7 @@ const ROLES = [
   { value: 'client', label: 'Client' },
 ]
 const ROLE_COLORS: Record<string, string> = {
-  super_admin: '#EF4444',
+  super_admin: '#00D76B',
   agency_admin: '#F59E0B',
   creative: '#3B82F6',
   client: '#555577',
