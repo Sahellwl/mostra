@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import Logo from '@/components/shared/Logo'
 
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -73,9 +74,7 @@ export default function AdminSidebar() {
         {/* Logo + badge Super Admin */}
         <div className="px-5 py-5 border-b border-[#1e1e3a] flex items-start justify-between">
           <div>
-            <span className="text-[15px] font-bold tracking-[0.3em] text-white select-none">
-              MO<span style={{ color: ACCENT }}>ST</span>RA
-            </span>
+            <Logo variant="full" color="white" className="h-7" />
             <div
               className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full"
               style={{ backgroundColor: `${ACCENT}20`, border: `1px solid ${ACCENT}40` }}

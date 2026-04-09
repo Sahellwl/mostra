@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Toaster } from 'sonner'
 import ClientLogout from './ClientLogout'
+import Logo from '@/components/shared/Logo'
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   // Auth optionnelle — cette route est publique
@@ -16,10 +17,8 @@ export default async function ClientLayout({ children }: { children: React.React
       <header className="border-b border-[#1a1a1a] bg-[#0a0a0a]/80 backdrop-blur sticky top-0 z-30">
         <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 select-none">
-            <span className="text-base font-black tracking-widest text-white uppercase">
-              MOSTRA
-            </span>
+          <Link href="/" className="flex items-center gap-2.5 select-none">
+            <Logo variant="full" color="white" className="h-7" />
             <span className="text-[10px] text-[#444444] uppercase tracking-widest font-medium hidden sm:block">
               Client
             </span>

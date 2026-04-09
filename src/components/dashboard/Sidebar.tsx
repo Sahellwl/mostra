@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Users, Settings, LogOut, Shield, Menu, X } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/useAuth'
+import Logo from '@/components/shared/Logo'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -50,13 +51,8 @@ export default function Sidebar() {
         `}
       >
         {/* Logo */}
-        <div className="px-5 py-6 border-b border-[#2a2a2a] flex items-center justify-between">
-          <div>
-            <span className="text-[15px] font-bold tracking-[0.3em] text-white select-none">
-              MO<span className="text-[#00D76B]">ST</span>RA
-            </span>
-            <p className="mt-0.5 text-[10px] tracking-widest text-[#444444] uppercase">Studio</p>
-          </div>
+        <div className="px-5 py-5 border-b border-[#2a2a2a] flex items-center justify-between">
+          <Logo variant="full" color="white" className="h-7" />
           <button
             onClick={close}
             aria-label="Fermer le menu"
