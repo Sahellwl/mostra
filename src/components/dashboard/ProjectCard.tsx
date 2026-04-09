@@ -25,9 +25,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             {project.name}
           </h3>
           {project.client && (
-            <p className="text-xs text-[#666666] mt-0.5 truncate">
-              {project.client.full_name}
-            </p>
+            <p className="text-xs text-[#666666] mt-0.5 truncate">{project.client.full_name}</p>
           )}
         </div>
         <StatusBadge status={project.status} className="flex-shrink-0" />
@@ -47,9 +45,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       {/* Footer */}
-      <p className="text-[11px] text-[#444444]">
-        Mis à jour {formatRelative(project.updated_at)}
-      </p>
+      <p className="text-[11px] text-[#444444]">Mis à jour {formatRelative(project.updated_at)}</p>
     </Link>
   )
 }

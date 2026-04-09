@@ -10,13 +10,8 @@ import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'L\'email est requis')
-    .email('Adresse email invalide'),
-  password: z
-    .string()
-    .min(1, 'Le mot de passe est requis'),
+  email: z.string().min(1, "L'email est requis").email('Adresse email invalide'),
+  password: z.string().min(1, 'Le mot de passe est requis'),
 })
 
 type LoginForm = z.infer<typeof loginSchema>
@@ -24,7 +19,8 @@ type LoginForm = z.infer<typeof loginSchema>
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? '/dashboard'
+  const redirectTo = searchParams.get('redirectTo') ?? '/'
+  const justInvited = searchParams.get('invited') === '1'
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -62,17 +58,21 @@ function LoginForm() {
   return (
     <>
       <h1 className="text-xl font-semibold text-white mb-1">Connexion</h1>
-      <p className="text-sm text-[#a0a0a0] mb-6">
-        Accédez à votre espace de production.
-      </p>
+      <p className="text-sm text-[#a0a0a0] mb-6">Accédez à votre espace de production.</p>
+
+      {justInvited && (
+        <div className="mb-5 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/20 px-4 py-3">
+          <p className="text-sm text-[#22C55E] font-medium">Compte créé avec succès !</p>
+          <p className="text-xs text-[#22C55E]/70 mt-0.5">
+            Connectez-vous avec votre email et mot de passe.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         {/* Email */}
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-[#a0a0a0] mb-1.5"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-[#a0a0a0] mb-1.5">
             Email
           </label>
           <input
@@ -91,17 +91,12 @@ function LoginForm() {
             "
             disabled={isSubmitting}
           />
-          {errors.email && (
-            <p className="mt-1.5 text-xs text-[#EF4444]">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="mt-1.5 text-xs text-[#EF4444]">{errors.email.message}</p>}
         </div>
 
         {/* Password */}
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-[#a0a0a0] mb-1.5"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-[#a0a0a0] mb-1.5">
             Mot de passe
           </label>
           <input
@@ -151,10 +146,7 @@ function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-[#666666]">
         Pas encore de compte ?{' '}
-        <Link
-          href="/register"
-          className="text-[#a0a0a0] hover:text-white transition-colors"
-        >
+        <Link href="/register" className="text-[#a0a0a0] hover:text-white transition-colors">
           Créer un compte
         </Link>
       </p>

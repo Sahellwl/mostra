@@ -6,10 +6,10 @@ import type { ProjectStatus } from '@/lib/types'
 export type FilterTab = 'all' | ProjectStatus
 
 const TABS: { value: FilterTab; label: string }[] = [
-  { value: 'all',       label: 'All' },
-  { value: 'active',    label: 'Active' },
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
-  { value: 'on_hold',   label: 'On hold' },
+  { value: 'on_hold', label: 'On hold' },
 ]
 
 interface ProjectFiltersProps {

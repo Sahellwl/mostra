@@ -1,5 +1,5 @@
 interface ProgressBarProps {
-  value: number        // 0–100
+  value: number // 0–100
   className?: string
   showLabel?: boolean
   size?: 'sm' | 'md'
@@ -23,9 +23,7 @@ export default function ProgressBar({
         />
       </div>
       {showLabel && (
-        <span className="text-xs text-[#666666] tabular-nums w-8 text-right">
-          {clamped}%
-        </span>
+        <span className="text-xs text-[#666666] tabular-nums w-8 text-right">{clamped}%</span>
       )}
     </div>
   )

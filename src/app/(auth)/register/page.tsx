@@ -9,25 +9,24 @@ import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-const registerSchema = z.object({
-  full_name: z
-    .string()
-    .min(2, 'Le nom doit contenir au moins 2 caractères')
-    .max(80, 'Le nom est trop long'),
-  email: z
-    .string()
-    .min(1, 'L\'email est requis')
-    .email('Adresse email invalide'),
-  password: z
-    .string()
-    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
-    .regex(/[A-Z]/, 'Doit contenir au moins une majuscule')
-    .regex(/[0-9]/, 'Doit contenir au moins un chiffre'),
-  confirm_password: z.string().min(1, 'Veuillez confirmer le mot de passe'),
-}).refine((data) => data.password === data.confirm_password, {
-  message: 'Les mots de passe ne correspondent pas',
-  path: ['confirm_password'],
-})
+const registerSchema = z
+  .object({
+    full_name: z
+      .string()
+      .min(2, 'Le nom doit contenir au moins 2 caractères')
+      .max(80, 'Le nom est trop long'),
+    email: z.string().min(1, "L'email est requis").email('Adresse email invalide'),
+    password: z
+      .string()
+      .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+      .regex(/[A-Z]/, 'Doit contenir au moins une majuscule')
+      .regex(/[0-9]/, 'Doit contenir au moins un chiffre'),
+    confirm_password: z.string().min(1, 'Veuillez confirmer le mot de passe'),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: 'Les mots de passe ne correspondent pas',
+    path: ['confirm_password'],
+  })
 
 type RegisterForm = z.infer<typeof registerSchema>
 
@@ -77,8 +76,8 @@ export default function RegisterPage() {
         </div>
         <h2 className="text-lg font-semibold text-white mb-2">Email envoyé !</h2>
         <p className="text-sm text-[#a0a0a0]">
-          Vérifiez votre boîte mail et cliquez sur le lien de confirmation
-          pour activer votre compte.
+          Vérifiez votre boîte mail et cliquez sur le lien de confirmation pour activer votre
+          compte.
         </p>
         <Link
           href="/login"
@@ -93,17 +92,12 @@ export default function RegisterPage() {
   return (
     <>
       <h1 className="text-xl font-semibold text-white mb-1">Créer un compte</h1>
-      <p className="text-sm text-[#a0a0a0] mb-6">
-        Rejoignez MOSTRA pour gérer vos productions.
-      </p>
+      <p className="text-sm text-[#a0a0a0] mb-6">Rejoignez MOSTRA pour gérer vos productions.</p>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         {/* Nom */}
         <div>
-          <label
-            htmlFor="full_name"
-            className="block text-sm font-medium text-[#a0a0a0] mb-1.5"
-          >
+          <label htmlFor="full_name" className="block text-sm font-medium text-[#a0a0a0] mb-1.5">
             Nom complet
           </label>
           <input
@@ -128,10 +122,7 @@ export default function RegisterPage() {
 
         {/* Email */}
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-[#a0a0a0] mb-1.5"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-[#a0a0a0] mb-1.5">
             Email
           </label>
           <input
@@ -149,17 +140,12 @@ export default function RegisterPage() {
             "
             disabled={isSubmitting}
           />
-          {errors.email && (
-            <p className="mt-1.5 text-xs text-[#EF4444]">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="mt-1.5 text-xs text-[#EF4444]">{errors.email.message}</p>}
         </div>
 
         {/* Password */}
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-[#a0a0a0] mb-1.5"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-[#a0a0a0] mb-1.5">
             Mot de passe
           </label>
           <input
@@ -236,10 +222,7 @@ export default function RegisterPage() {
 
       <p className="mt-6 text-center text-sm text-[#666666]">
         Déjà un compte ?{' '}
-        <Link
-          href="/login"
-          className="text-[#a0a0a0] hover:text-white transition-colors"
-        >
+        <Link href="/login" className="text-[#a0a0a0] hover:text-white transition-colors">
           Se connecter
         </Link>
       </p>

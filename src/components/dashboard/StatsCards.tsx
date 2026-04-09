@@ -44,9 +44,7 @@ export default function StatsCards(props: StatsCardsProps) {
               <Icon className={`h-5 w-5 ${card.iconColor}`} />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-white tabular-nums">
-                {card.value}
-              </p>
+              <p className="text-2xl font-semibold text-white tabular-nums">{card.value}</p>
               <p className="text-xs text-[#666666] mt-0.5">{card.label}</p>
             </div>
           </div>

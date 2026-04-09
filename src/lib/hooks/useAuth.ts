@@ -37,47 +37,46 @@ export function useAuth(): UseAuthReturn {
     loading: true,
   })
 
-  const fetchUserData = useCallback(async (user: User) => {
-    // Requêtes séparées pour éviter les problèmes d'inférence TypeScript avec les joins
-    const [profileResult, memberResult] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle(),
-      supabase
-        .from('agency_members')
-        .select('id, agency_id, user_id, role, invited_at, accepted_at, is_active')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('invited_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
+  const fetchUserData = useCallback(
+    async (user: User) => {
+      // Requêtes séparées pour éviter les problèmes d'inférence TypeScript avec les joins
+      const [profileResult, memberResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase
+          .from('agency_members')
+          .select('id, agency_id, user_id, role, invited_at, accepted_at, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('invited_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
 
-    const profile = profileResult.data as Profile | null
-    const member = memberResult.data as AgencyMember | null
+      const profile = profileResult.data as Profile | null
+      const member = memberResult.data as AgencyMember | null
 
-    // Récupère l'agence séparément si un member a été trouvé
-    let agency: Agency | null = null
-    if (member?.agency_id) {
-      const { data } = await supabase
-        .from('agencies')
-        .select('*')
-        .eq('id', member.agency_id)
-        .maybeSingle()
-      agency = data as Agency | null
-    }
+      // Récupère l'agence séparément si un member a été trouvé
+      let agency: Agency | null = null
+      if (member?.agency_id) {
+        const { data } = await supabase
+          .from('agencies')
+          .select('*')
+          .eq('id', member.agency_id)
+          .maybeSingle()
+        agency = data as Agency | null
+      }
 
-    setState({
-      user,
-      profile,
-      member,
-      agency,
-      role: (member?.role as UserRole) ?? null,
-      loading: false,
-    })
-  }, [supabase])
+      setState({
+        user,
+        profile,
+        member,
+        agency,
+        role: (member?.role as UserRole) ?? null,
+        loading: false,
+      })
+    },
+    [supabase],
+  )
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -88,22 +87,22 @@ export function useAuth(): UseAuthReturn {
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          fetchUserData(session.user)
-        } else {
-          setState({
-            user: null,
-            profile: null,
-            member: null,
-            agency: null,
-            role: null,
-            loading: false,
-          })
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUserData(session.user)
+      } else {
+        setState({
+          user: null,
+          profile: null,
+          member: null,
+          agency: null,
+          role: null,
+          loading: false,
+        })
       }
-    )
+    })
 
     return () => subscription.unsubscribe()
   }, [fetchUserData, supabase.auth])
@@ -119,7 +118,7 @@ export function useAuth(): UseAuthReturn {
       }
       return { error: null }
     },
-    [supabase]
+    [supabase],
   )
 
   const signOut = useCallback(async () => {

@@ -8,6 +8,11 @@ export function getFileExtension(filename: string): string {
   return filename.split('.').pop()?.toLowerCase() ?? ''
 }
 
-export function buildStoragePath(projectId: string, phase: string, version: number, filename: string): string {
+export function buildStoragePath(
+  projectId: string,
+  phase: string,
+  version: number,
+  filename: string,
+): string {
   return `project-files/${projectId}/${phase}/v${version}/${filename}`
 }

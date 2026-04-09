@@ -1,9 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "../styles/globals.css";
 
 @custom-variant dark (&:is(.dark *));
+
+/* ── Animation: entrée glissante vers le bas (Realtime) ─── */
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-down {
+  animation: fade-in-down 0.3s ease-out;
+}
 
 @theme inline {
   /* MOSTRA Design Tokens */
