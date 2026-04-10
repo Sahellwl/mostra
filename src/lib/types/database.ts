@@ -1,6 +1,7 @@
 // ============================================================
 // MOSTRA — Types TypeScript (basés sur le schema Supabase)
 // Ref: supabase/migrations/001_initial_schema.sql
+//      supabase/migrations/011_subphases_and_blocks.sql
 // ============================================================
 // Pour regénérer automatiquement :
 //   npx supabase gen types typescript --local > src/lib/types/database.ts
@@ -33,6 +34,14 @@ export type ActivityAction =
   | 'member_joined'
   | 'project_created'
   | 'project_archived'
+
+export type BlockType =
+  | 'form_question'
+  | 'script_section'
+  | 'moodboard_image'
+  | 'storyboard_shot'
+  | 'audio_track'
+  | 'design_file'
 
 // ----------------------------------------------------------
 // Row types (lignes telles que retournées par Supabase)
@@ -77,6 +86,8 @@ export interface PhaseTemplate {
   icon: string | null
   sort_order: number
   is_default: boolean
+  /** Définition des sous-phases par défaut. Format: SubPhaseDefinition[] */
+  sub_phases: SubPhaseDefinition[]
   created_at: string
 }
 
@@ -108,6 +119,43 @@ export interface ProjectPhase {
   updated_at: string
 }
 
+export interface SubPhase {
+  id: string
+  phase_id: string
+  name: string
+  slug: string
+  sort_order: number
+  status: PhaseStatus
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PhaseBlock {
+  id: string
+  sub_phase_id: string | null
+  phase_id: string | null
+  type: BlockType
+  content: Json
+  sort_order: number
+  is_approved: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface FormTemplate {
+  id: string
+  agency_id: string
+  name: string
+  description: string | null
+  questions: FormQuestion[]
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface PhaseFile {
   id: string
   phase_id: string
@@ -125,6 +173,8 @@ export interface Comment {
   id: string
   project_id: string
   phase_id: string | null
+  sub_phase_id: string | null
+  block_id: string | null
   user_id: string
   content: string
   is_resolved: boolean
@@ -155,6 +205,84 @@ export interface Invitation {
 }
 
 // ----------------------------------------------------------
+// Block content types (contenu JSON typé par type de bloc)
+// ----------------------------------------------------------
+
+export interface FormQuestion {
+  id: string
+  question: string
+  field_type: 'text' | 'textarea' | 'select'
+  required: boolean
+  options?: string[]
+}
+
+export interface FormQuestionContent {
+  question: string
+  answer: string | null
+  required: boolean
+  field_type: 'text' | 'textarea' | 'select'
+  options?: string[]
+}
+
+export interface ScriptSectionContent {
+  title: string
+  /** Couleur hex de la section (ex: '#00D76B') */
+  color: string
+  content: string
+  description?: string
+}
+
+export interface MoodboardImageContent {
+  title: string
+  image_url: string
+  description?: string
+  is_selected: boolean
+}
+
+export interface StoryboardShotContent {
+  shot_number: number
+  image_url: string
+  description?: string
+}
+
+export interface AudioTrackContent {
+  title: string
+  audio_url: string
+  description?: string
+  kind: 'vo' | 'music'
+  is_selected: boolean
+}
+
+export interface DesignFileContent {
+  file_url: string
+  file_name: string
+  description?: string
+}
+
+/** Map du type de bloc vers son type de contenu */
+export type BlockContentByType = {
+  form_question:   FormQuestionContent
+  script_section:  ScriptSectionContent
+  moodboard_image: MoodboardImageContent
+  storyboard_shot: StoryboardShotContent
+  audio_track:     AudioTrackContent
+  design_file:     DesignFileContent
+}
+
+/** PhaseBlock avec le contenu typé selon le type de bloc */
+export type TypedPhaseBlock<T extends BlockType> = Omit<PhaseBlock, 'content'> & {
+  type: T
+  content: BlockContentByType[T]
+}
+
+/** Définition d'une sous-phase dans un PhaseTemplate */
+export interface SubPhaseDefinition {
+  name: string
+  slug: string
+  sort_order: number
+}
+
+// ----------------------------------------------------------
 // Insert types (champs requis lors d'un INSERT)
 // ----------------------------------------------------------
 
@@ -176,6 +304,7 @@ export type AgencyMemberInsert = Omit<AgencyMember, 'id' | 'invited_at'> & {
 
 export type PhaseTemplateInsert = Omit<PhaseTemplate, 'id' | 'created_at'> & {
   id?: string
+  sub_phases?: SubPhaseDefinition[]
 }
 
 export type ProjectInsert = Omit<Project, 'id' | 'created_at' | 'updated_at' | 'share_token'> & {
@@ -189,6 +318,22 @@ export type ProjectPhaseInsert = Omit<ProjectPhase, 'id' | 'created_at' | 'updat
   completed_at?: string | null
 }
 
+export type SubPhaseInsert = Omit<SubPhase, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string
+  started_at?: string | null
+  completed_at?: string | null
+}
+
+export type PhaseBlockInsert = Omit<PhaseBlock, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string
+  is_approved?: boolean
+}
+
+export type FormTemplateInsert = Omit<FormTemplate, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string
+  is_default?: boolean
+}
+
 export type PhaseFileInsert = Omit<PhaseFile, 'id' | 'created_at'> & {
   id?: string
 }
@@ -197,6 +342,8 @@ export type CommentInsert = Omit<Comment, 'id' | 'created_at' | 'updated_at'> & 
   id?: string
   is_resolved?: boolean
   parent_id?: string | null
+  sub_phase_id?: string | null
+  block_id?: string | null
 }
 
 export type ActivityLogInsert = Omit<ActivityLog, 'id' | 'created_at'> & {
@@ -214,12 +361,15 @@ export type InvitationInsert = Omit<Invitation, 'id' | 'token' | 'accepted_at' |
 // Update types (tous les champs optionnels sauf id)
 // ----------------------------------------------------------
 
-export type AgencyUpdate = Partial<Omit<Agency, 'id' | 'created_at'>>
-export type ProfileUpdate = Partial<Omit<Profile, 'id' | 'created_at'>>
-export type ProjectUpdate = Partial<Omit<Project, 'id' | 'created_at'>>
+export type AgencyUpdate      = Partial<Omit<Agency, 'id' | 'created_at'>>
+export type ProfileUpdate     = Partial<Omit<Profile, 'id' | 'created_at'>>
+export type ProjectUpdate     = Partial<Omit<Project, 'id' | 'created_at'>>
 export type ProjectPhaseUpdate = Partial<Omit<ProjectPhase, 'id' | 'created_at'>>
-export type PhaseFileUpdate = Partial<Omit<PhaseFile, 'id' | 'created_at'>>
-export type CommentUpdate = Partial<Omit<Comment, 'id' | 'created_at'>>
+export type SubPhaseUpdate    = Partial<Omit<SubPhase, 'id' | 'created_at'>>
+export type PhaseBlockUpdate  = Partial<Omit<PhaseBlock, 'id' | 'created_at'>>
+export type FormTemplateUpdate = Partial<Omit<FormTemplate, 'id' | 'created_at'>>
+export type PhaseFileUpdate   = Partial<Omit<PhaseFile, 'id' | 'created_at'>>
+export type CommentUpdate     = Partial<Omit<Comment, 'id' | 'created_at'>>
 export type AgencyMemberUpdate = Partial<Omit<AgencyMember, 'id' | 'agency_id' | 'user_id'>>
 
 // ----------------------------------------------------------
@@ -231,15 +381,39 @@ export interface ProjectWithPhases extends Project {
 }
 
 export interface ProjectWithDetails extends Project {
-  phases: PhaseWithFiles[]
+  phases: PhaseWithSubPhases[]
   client: Profile | null
   project_manager: Profile | null
 }
 
+/** Phase avec ses sous-phases (nouveau modèle Sprint 9) */
+export interface PhaseWithSubPhases extends ProjectPhase {
+  sub_phases: SubPhaseWithBlocks[]
+  /** Fichiers directs sur la phase (Animation & Rendu sans sous-phases) */
+  files: PhaseFile[]
+}
+
+/** Sous-phase avec ses blocs */
+export interface SubPhaseWithBlocks extends SubPhase {
+  blocks: PhaseBlock[]
+}
+
+/** Sous-phase avec ses blocs et commentaires */
+export interface SubPhaseWithBlocksAndComments extends SubPhase {
+  blocks: PhaseBlockWithComments[]
+}
+
+/** Bloc avec ses commentaires */
+export interface PhaseBlockWithComments extends PhaseBlock {
+  comments: CommentWithAuthor[]
+}
+
+/** @deprecated Préférer PhaseWithSubPhases */
 export interface PhaseWithFiles extends ProjectPhase {
   files: PhaseFile[]
 }
 
+/** @deprecated Préférer SubPhaseWithBlocksAndComments */
 export interface PhaseWithFilesAndComments extends ProjectPhase {
   files: PhaseFile[]
   comments: CommentWithAuthor[]
@@ -276,71 +450,86 @@ export interface Database {
   public: {
     Tables: {
       agencies: {
-        Row: Agency
+        Row:    Agency
         Insert: AgencyInsert
         Update: AgencyUpdate
       }
       profiles: {
-        Row: Profile
+        Row:    Profile
         Insert: ProfileInsert
         Update: ProfileUpdate
       }
       agency_members: {
-        Row: AgencyMember
+        Row:    AgencyMember
         Insert: AgencyMemberInsert
         Update: AgencyMemberUpdate
       }
       phase_templates: {
-        Row: PhaseTemplate
+        Row:    PhaseTemplate
         Insert: PhaseTemplateInsert
         Update: Partial<Omit<PhaseTemplate, 'id' | 'created_at'>>
       }
       projects: {
-        Row: Project
+        Row:    Project
         Insert: ProjectInsert
         Update: ProjectUpdate
       }
       project_phases: {
-        Row: ProjectPhase
+        Row:    ProjectPhase
         Insert: ProjectPhaseInsert
         Update: ProjectPhaseUpdate
       }
+      sub_phases: {
+        Row:    SubPhase
+        Insert: SubPhaseInsert
+        Update: SubPhaseUpdate
+      }
+      phase_blocks: {
+        Row:    PhaseBlock
+        Insert: PhaseBlockInsert
+        Update: PhaseBlockUpdate
+      }
+      form_templates: {
+        Row:    FormTemplate
+        Insert: FormTemplateInsert
+        Update: FormTemplateUpdate
+      }
       phase_files: {
-        Row: PhaseFile
+        Row:    PhaseFile
         Insert: PhaseFileInsert
         Update: PhaseFileUpdate
       }
       comments: {
-        Row: Comment
+        Row:    Comment
         Insert: CommentInsert
         Update: CommentUpdate
       }
       activity_logs: {
-        Row: ActivityLog
+        Row:    ActivityLog
         Insert: ActivityLogInsert
         Update: never
       }
       invitations: {
-        Row: Invitation
+        Row:    Invitation
         Insert: InvitationInsert
         Update: Partial<Omit<Invitation, 'id' | 'created_at'>>
       }
     }
     Functions: {
       get_user_agencies: {
-        Args: Record<string, never>
+        Args:    Record<string, never>
         Returns: string[]
       }
       get_user_role: {
-        Args: { p_agency_id: string }
+        Args:    { p_agency_id: string }
         Returns: UserRole | null
       }
       is_agency_admin: {
-        Args: { p_agency_id: string }
+        Args:    { p_agency_id: string }
         Returns: boolean
       }
       is_agency_member: {
-        Args: { p_agency_id: string }
+        Args:    { p_agency_id: string }
         Returns: boolean
       }
     }
