@@ -174,11 +174,17 @@ export default function ClientPhaseCard({
         <div className="ml-[52px] mt-1.5 space-y-1">
           {subPhases.map((sp) => {
             const isFormSp = sp.slug === 'formulaire' || sp.slug === 'form'
+            const isScriptSp = sp.slug === 'script'
             const spDone = sp.status === 'completed' || sp.status === 'approved'
             const spInReview = sp.status === 'in_review'
             const spInProgress = sp.status === 'in_progress'
             const dotColor = spDone ? '#22C55E' : spInReview ? '#F59E0B' : '#3B82F6'
-            const formHref = `/client/${token}/phases/${phase.id}/sub/${sp.id}`
+            const spHref = `/client/${token}/phases/${phase.id}/sub/${sp.id}`
+
+            // Sub-phases that have a dedicated client page + current accessible state
+            const hasClientPage =
+              (isFormSp && (spInProgress || spInReview || spDone)) ||
+              (isScriptSp && (spInReview || spDone))
 
             return (
               <div
@@ -189,35 +195,49 @@ export default function ClientPhaseCard({
                   className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
                   style={{ backgroundColor: dotColor }}
                 />
-                <span className="text-[11px] text-[#666666] flex-1 truncate">{sp.name}</span>
-                {/* Form sub-phase in_progress → CTA to fill */}
+                {/* Name — clickable when a client page exists */}
+                {hasClientPage ? (
+                  <Link
+                    href={spHref}
+                    className="text-[11px] text-[#666666] hover:text-white transition-colors flex-1 truncate"
+                  >
+                    {sp.name}
+                  </Link>
+                ) : (
+                  <span className="text-[11px] text-[#666666] flex-1 truncate">{sp.name}</span>
+                )}
+
+                {/* Form: in_progress → À remplir */}
                 {isFormSp && spInProgress && (
                   <Link
-                    href={formHref}
+                    href={spHref}
                     className="text-[10px] font-semibold text-[#00D76B] border border-[#00D76B]/30 bg-[#00D76B]/10 rounded px-2 py-0.5 hover:bg-[#00D76B]/20 transition-colors flex-shrink-0"
                   >
                     À remplir
                   </Link>
                 )}
-                {/* Form sub-phase submitted → read-only link */}
+                {/* Form: in_review → En attente */}
                 {isFormSp && spInReview && (
                   <Link
-                    href={formHref}
+                    href={spHref}
                     className="text-[10px] text-[#F59E0B] flex-shrink-0 hover:underline"
                   >
                     En attente
                   </Link>
                 )}
-                {/* Completed */}
+                {/* Script (or any non-form): in_review → Voir */}
+                {!isFormSp && spInReview && (
+                  <Link
+                    href={spHref}
+                    className="text-[10px] font-semibold text-[#F59E0B] border border-[#F59E0B]/30 bg-[#F59E0B]/10 rounded px-2 py-0.5 hover:bg-[#F59E0B]/20 transition-colors flex-shrink-0"
+                  >
+                    Voir
+                  </Link>
+                )}
+                {/* Done */}
                 {spDone && (
                   <span className="text-[10px] font-medium text-[#22C55E] flex-shrink-0">
                     Terminé
-                  </span>
-                )}
-                {/* Non-form in_review */}
-                {!isFormSp && spInReview && (
-                  <span className="text-[10px] font-medium text-[#F59E0B] flex-shrink-0">
-                    À valider
                   </span>
                 )}
               </div>

@@ -203,3 +203,74 @@ export async function completePhase(phaseId: string): Promise<PhaseActionResult>
   revalidatePath(`/projects/${phase.project_id}`)
   return { success: true }
 }
+
+// ─── unapprovePhase ───────────────────────────────────────────────
+// Remet la phase de "completed"/"approved" → "in_review".
+// Recalcule la progression du projet.
+
+export async function unapprovePhase(phaseId: string): Promise<PhaseActionResult> {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Non authentifié' }
+
+  const membership = await getCurrentMember(supabase, user.id)
+  if (!membership) return { success: false, error: 'Membre introuvable' }
+
+  const { role } = membership.member
+  if (role !== 'super_admin' && role !== 'agency_admin') {
+    return { success: false, error: 'Seul un admin peut désapprouver une phase' }
+  }
+
+  const { data: rawPhase } = await supabase
+    .from('project_phases')
+    .select('*')
+    .eq('id', phaseId)
+    .maybeSingle()
+
+  const phase = rawPhase as ProjectPhase | null
+  if (!phase) return { success: false, error: 'Phase introuvable' }
+  if (phase.status !== 'completed' && phase.status !== 'approved') {
+    return { success: false, error: 'La phase doit être approuvée pour être désapprouvée' }
+  }
+
+  const { error } = await db(supabase)
+    .from('project_phases')
+    .update({ status: 'in_review', completed_at: null })
+    .eq('id', phaseId)
+
+  if (error) return { success: false, error: error.message }
+
+  // Recalcule progression du projet
+  const { data: rawAllPhases } = await supabase
+    .from('project_phases')
+    .select('id, status')
+    .eq('project_id', phase.project_id)
+
+  const allPhases = (rawAllPhases as Pick<ProjectPhase, 'id' | 'status'>[] | null) ?? []
+  const updatedPhases = allPhases.map((p) =>
+    p.id === phaseId ? { ...p, status: 'in_review' as const } : p,
+  )
+  const doneCount = updatedPhases.filter(
+    (p) => p.status === 'completed' || p.status === 'approved',
+  ).length
+  const progress = allPhases.length > 0 ? Math.round((doneCount / allPhases.length) * 100) : 0
+
+  await db(supabase)
+    .from('projects')
+    .update({ progress, status: 'active' })
+    .eq('id', phase.project_id)
+
+  await db(supabase)
+    .from('activity_logs')
+    .insert({
+      project_id: phase.project_id,
+      user_id: user.id,
+      action: 'status_changed',
+      details: { phase_name: phase.name, message: 'Désapprouvée par admin' },
+    })
+
+  revalidatePath(`/projects/${phase.project_id}`)
+  return { success: true }
+}

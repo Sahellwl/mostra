@@ -15,6 +15,7 @@ import {
   Send,
   Play,
   CheckCircle,
+  RotateCcw,
   ChevronDown,
   ChevronRight,
   Loader2,
@@ -26,11 +27,12 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import FileUpload from '@/components/project/FileUpload'
 import FileVersionHistory from '@/components/project/FileVersionHistory'
 import { formatDate } from '@/lib/utils/dates'
-import { startPhase, sendToReview, completePhase } from '@/app/(dashboard)/projects/phase-actions'
+import { startPhase, sendToReview, completePhase, unapprovePhase } from '@/app/(dashboard)/projects/phase-actions'
 import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
+  unapproveSubPhase,
 } from '@/app/(dashboard)/projects/sub-phase-actions'
 import type { PhaseFile, PhaseStatus, ProjectPhase, SubPhase, UserRole } from '@/lib/types'
 
@@ -60,7 +62,7 @@ interface PhaseCardProps {
   userRole: UserRole
 }
 
-type LoadingAction = 'start' | 'review' | 'complete' | null
+type LoadingAction = 'start' | 'review' | 'complete' | 'unapprove' | null
 
 // ── Composant principal ───────────────────────────────────────────
 
@@ -74,6 +76,7 @@ export default function PhaseCard({
   userRole,
 }: PhaseCardProps) {
   const [loading, setLoading] = useState<LoadingAction>(null)
+  const [confirmUnapprovePhase, setConfirmUnapprovePhase] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [subPhasesOpen, setSubPhasesOpen] = useState(
     // Auto-expand si phase active ou au moins une sous-phase active
@@ -95,8 +98,10 @@ export default function PhaseCard({
     let result
     if (action === 'start') result = await startPhase(phase.id)
     else if (action === 'review') result = await sendToReview(phase.id)
+    else if (action === 'unapprove') result = await unapprovePhase(phase.id)
     else result = await completePhase(phase.id)
     setLoading(null)
+    setConfirmUnapprovePhase(false)
     if (!result.success) toast.error(result.error)
   }
 
@@ -193,11 +198,14 @@ export default function PhaseCard({
               isAdmin={isAdmin}
               fileCount={files.length}
               loading={loading}
+              confirmUnapprove={confirmUnapprovePhase}
               viewHref={`/projects/${projectId}/phases/${phase.id}/view`}
               onStart={() => handle('start')}
               onUpload={() => setUploadOpen(true)}
               onReview={() => handle('review')}
               onComplete={() => handle('complete')}
+              onUnapproveRequest={() => setConfirmUnapprovePhase(true)}
+              onUnapproveConfirm={() => handle('unapprove')}
             />
           ) : (
             /* Phases avec sous-phases → seul "Démarrer" est visible au niveau phase (si pending)
@@ -240,7 +248,7 @@ export default function PhaseCard({
 
 // ── Liste des sous-phases avec actions ───────────────────────────
 
-type SpLoading = Record<string, 'start' | 'review' | 'approve' | null>
+type SpLoading = Record<string, 'start' | 'review' | 'approve' | 'unapprove' | null>
 
 interface SubPhaseListProps {
   subPhases: SubPhase[]
@@ -262,17 +270,21 @@ function SubPhaseList({
   isAdmin,
 }: SubPhaseListProps) {
   const [spLoading, setSpLoading] = useState<SpLoading>({})
+  // 2-click confirm: stores the spId awaiting unapprove confirmation
+  const [confirmUnapprove, setConfirmUnapprove] = useState<string | null>(null)
 
   async function handleSp(
     spId: string,
-    action: 'start' | 'review' | 'approve',
+    action: 'start' | 'review' | 'approve' | 'unapprove',
   ) {
     setSpLoading((prev) => ({ ...prev, [spId]: action }))
     let result: { success: boolean; error?: string }
     if (action === 'start') result = await startSubPhase(spId)
     else if (action === 'review') result = await sendSubPhaseToReview(spId)
-    else result = await approveSubPhase(spId)
+    else if (action === 'approve') result = await approveSubPhase(spId)
+    else result = await unapproveSubPhase(spId)
     setSpLoading((prev) => ({ ...prev, [spId]: null }))
+    setConfirmUnapprove(null)
     if (!result.success && 'error' in result) toast.error(result.error as string)
   }
 
@@ -281,6 +293,7 @@ function SubPhaseList({
   const btnGhost = `${btnBase} border border-[#2a2a2a] text-[#666666] hover:text-white hover:border-[#444444]`
   const btnGreen = `${btnBase} bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B] hover:bg-[#00D76B]/20`
   const btnAmber = `${btnBase} bg-[#22C55E]/10 border border-[#22C55E]/20 text-[#22C55E] hover:bg-[#22C55E]/20`
+  const btnRed = `${btnBase} bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20`
 
   return (
     <div className="mb-3 space-y-1.5 pl-1">
@@ -298,6 +311,7 @@ function SubPhaseList({
         const canStartSp = canAct && canStart && prevDone && sp.status === 'pending'
         const canReview = canAct && sp.status === 'in_progress'
         const canApproveSp = isAdmin && sp.status === 'in_review'
+        const canUnapproveSp = isAdmin && (sp.status === 'completed' || sp.status === 'approved')
         const canView = sp.status !== 'pending'
 
         return (
@@ -399,6 +413,35 @@ function SubPhaseList({
                 </button>
               )}
 
+              {/* Désapprouver — 2-click confirm */}
+              {canUnapproveSp && (
+                confirmUnapprove === sp.id ? (
+                  <button
+                    type="button"
+                    className={btnRed}
+                    disabled={busy}
+                    onClick={() => handleSp(sp.id, 'unapprove')}
+                  >
+                    {spLoading[sp.id] === 'unapprove' ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-3 w-3" />
+                    )}
+                    Confirmer ?
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={btnGhost}
+                    disabled={busy}
+                    onClick={() => setConfirmUnapprove(sp.id)}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Désapprouver
+                  </button>
+                )
+              )}
+
               {!canStartSp && sp.status === 'pending' && (
                 <Lock className="h-3 w-3 text-[#333333]" />
               )}
@@ -419,11 +462,14 @@ interface PhaseActionsProps {
   isAdmin: boolean
   fileCount: number
   loading: LoadingAction
+  confirmUnapprove: boolean
   viewHref: string
   onStart: () => void
   onUpload: () => void
   onReview: () => void
   onComplete: () => void
+  onUnapproveRequest: () => void
+  onUnapproveConfirm: () => void
 }
 
 function PhaseActions({
@@ -433,17 +479,21 @@ function PhaseActions({
   isAdmin,
   fileCount,
   loading,
+  confirmUnapprove,
   viewHref,
   onStart,
   onUpload,
   onReview,
   onComplete,
+  onUnapproveRequest,
+  onUnapproveConfirm,
 }: PhaseActionsProps) {
   const btnBase =
     'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
   const btnGhost = `${btnBase} border border-[#2a2a2a] text-[#a0a0a0] hover:text-white hover:border-[#444444]`
   const btnPrimary = `${btnBase} bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B] hover:bg-[#00D76B]/20`
   const btnGreen = `${btnBase} bg-[#22C55E]/10 border border-[#22C55E]/20 text-[#22C55E] hover:bg-[#22C55E]/20`
+  const btnRed = `${btnBase} bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20`
 
   const busy = loading !== null
 
@@ -528,10 +578,39 @@ function PhaseActions({
 
   // Completed / Approved ─────────────────────────────────────────────
   return (
-    <Link href={viewHref} className={btnGhost}>
-      <Eye className="h-3.5 w-3.5" />
-      Voir
-    </Link>
+    <div className="flex items-center gap-2 flex-wrap">
+      <Link href={viewHref} className={btnGhost}>
+        <Eye className="h-3.5 w-3.5" />
+        Voir
+      </Link>
+      {isAdmin && (
+        confirmUnapprove ? (
+          <button
+            type="button"
+            className={btnRed}
+            disabled={busy}
+            onClick={onUnapproveConfirm}
+          >
+            {loading === 'unapprove' ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5" />
+            )}
+            Confirmer la désapprobation ?
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={btnGhost}
+            disabled={busy}
+            onClick={onUnapproveRequest}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Désapprouver
+          </button>
+        )
+      )}
+    </div>
   )
 }
 

@@ -8,13 +8,16 @@ import { getCurrentMember } from '@/lib/supabase/queries'
 import StatusBadge from '@/components/shared/StatusBadge'
 import SubPhaseActions from '@/components/project/SubPhaseActions'
 import FormSubPhaseAdmin from '@/components/project/FormSubPhaseAdmin'
-import type { Project, ProjectPhase, SubPhase, FormTemplate, FormQuestionContent, UserRole } from '@/lib/types'
+import ScriptEditor from '@/components/project/ScriptEditor'
+import type { Project, ProjectPhase, SubPhase, FormTemplate, FormQuestionContent, ScriptSectionContent, UserRole, Profile } from '@/lib/types'
+import type { BlockComment } from '@/lib/hooks/useRealtimeBlockComments'
 
 interface SubPhasePageProps {
   params: { id: string; phaseId: string; subPhaseId: string }
 }
 
 const FORM_SLUGS = ['formulaire', 'form']
+const SCRIPT_SLUGS = ['script']
 
 const SUB_PHASE_META: Record<string, { label: string; description: string; sprint: string }> = {
   formulaire: {
@@ -131,6 +134,7 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
       (siblings[idx - 1].status === 'completed' || siblings[idx - 1].status === 'approved'))
 
   const isFormSubPhase = FORM_SLUGS.includes(subPhase.slug)
+  const isScriptSubPhase = SCRIPT_SLUGS.includes(subPhase.slug)
 
   // Data spécifique formulaire
   let formBlocks: { id: string; content: FormQuestionContent; sort_order: number }[] = []
@@ -153,6 +157,57 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
     ])
     formBlocks = (rawBlocks ?? []) as { id: string; content: FormQuestionContent; sort_order: number }[]
     formTemplates = (rawTemplates ?? []) as FormTemplate[]
+  }
+
+  // Data spécifique script
+  let scriptBlocks: { id: string; content: ScriptSectionContent; sort_order: number }[] = []
+  let scriptComments: BlockComment[] = []
+
+  if (isScriptSubPhase) {
+    const { data: rawScriptBlocks } = await db(supabase)
+      .from('phase_blocks')
+      .select('id, content, sort_order')
+      .eq('sub_phase_id', params.subPhaseId)
+      .eq('type', 'script_section')
+      .order('sort_order', { ascending: true })
+    scriptBlocks = (rawScriptBlocks ?? []) as { id: string; content: ScriptSectionContent; sort_order: number }[]
+
+    // Fetch comments for this sub-phase
+    const { data: rawComments } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('sub_phase_id', params.subPhaseId)
+      .order('created_at', { ascending: true })
+
+    const rawCommentList = (rawComments ?? []) as {
+      id: string
+      block_id: string | null
+      sub_phase_id: string | null
+      phase_id: string | null
+      user_id: string
+      content: string
+      is_resolved: boolean
+      created_at: string
+      updated_at: string
+    }[]
+
+    // Fetch author profiles
+    const authorIds = [...new Set(rawCommentList.map((c) => c.user_id))]
+    const authorMap = new Map<string, Pick<Profile, 'id' | 'full_name' | 'avatar_url'>>()
+    if (authorIds.length > 0) {
+      const { data: rawAuthors } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', authorIds)
+      ;(rawAuthors as Pick<Profile, 'id' | 'full_name' | 'avatar_url'>[] | null)?.forEach((p) =>
+        authorMap.set(p.id, p),
+      )
+    }
+
+    scriptComments = rawCommentList.map((c) => ({
+      ...c,
+      author: authorMap.get(c.user_id) ?? null,
+    }))
   }
 
   const meta = SUB_PHASE_META[subPhase.slug]
@@ -195,8 +250,8 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
           <StatusBadge status={subPhase.status} className="flex-shrink-0" />
         </div>
 
-        {/* Actions standard (Démarrer / Envoyer en review / Approuver) — masquées pour formulaire */}
-        {!isFormSubPhase && (
+        {/* Actions standard — masquées pour formulaire et script (gèrent eux-mêmes leur workflow) */}
+        {!isFormSubPhase && !isScriptSubPhase && (
           <SubPhaseActions
             subPhaseId={subPhase.id}
             subPhaseStatus={subPhase.status}
@@ -218,8 +273,22 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
           />
         )}
 
+        {/* Éditeur de script */}
+        {isScriptSubPhase && (
+          <ScriptEditor
+            subPhaseId={subPhase.id}
+            subPhaseStatus={subPhase.status}
+            userRole={userRole}
+            canStart={canStart}
+            initialBlocks={scriptBlocks}
+            projectId={project.id}
+            phaseId={phase.id}
+            initialComments={scriptComments}
+          />
+        )}
+
         {/* Placeholder pour les autres sous-phases */}
-        {!isFormSubPhase && (
+        {!isFormSubPhase && !isScriptSubPhase && (
           <div className="bg-[#111111] border border-[#2a2a2a] rounded-2xl p-10 text-center space-y-4">
             <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center mx-auto">
               <Clock className="h-6 w-6 text-[#333333]" />
