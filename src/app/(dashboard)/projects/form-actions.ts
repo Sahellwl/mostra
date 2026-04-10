@@ -1,0 +1,242 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { db } from '@/lib/supabase/helpers'
+import { getCurrentMember } from '@/lib/supabase/queries'
+import type { FormTemplate, FormQuestionContent, SubPhase, ProjectPhase } from '@/lib/types'
+
+export type FormActionResult = { success: true } | { success: false; error: string }
+
+// ── Admin auth ────────────────────────────────────────────────────
+
+async function getAdminContext() {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  const membership = await getCurrentMember(supabase, user.id)
+  if (!membership) return null
+  const { role } = membership.member
+  if (role !== 'super_admin' && role !== 'agency_admin') return null
+  return { supabase, membership }
+}
+
+// ── Token auth ────────────────────────────────────────────────────
+
+async function resolveToken(token: string): Promise<{ id: string } | null> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('projects')
+    .select('id')
+    .eq('share_token', token)
+    .maybeSingle()
+  return data as { id: string } | null
+}
+
+// ── Sub-phase nav helpers ─────────────────────────────────────────
+
+async function getSubPhaseParents(
+  client: ReturnType<typeof createClient> | ReturnType<typeof createAdminClient>,
+  subPhaseId: string,
+) {
+  const { data: rawSp } = await client
+    .from('sub_phases')
+    .select('id, phase_id, status')
+    .eq('id', subPhaseId)
+    .maybeSingle()
+  const sp = rawSp as Pick<SubPhase, 'id' | 'phase_id' | 'status'> | null
+  if (!sp) return null
+
+  const { data: rawPhase } = await client
+    .from('project_phases')
+    .select('id, project_id')
+    .eq('id', sp.phase_id)
+    .maybeSingle()
+  const phase = rawPhase as Pick<ProjectPhase, 'id' | 'project_id'> | null
+  if (!phase) return null
+
+  return { sp, phase }
+}
+
+// ── applyFormTemplate ─────────────────────────────────────────────
+
+export async function applyFormTemplate(
+  subPhaseId: string,
+  templateId: string,
+): Promise<FormActionResult> {
+  const ctx = await getAdminContext()
+  if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+  const { supabase, membership } = ctx
+
+  // Fetch template (scoped to agency)
+  const { data: rawTpl } = await supabase
+    .from('form_templates')
+    .select('questions')
+    .eq('id', templateId)
+    .eq('agency_id', membership.member.agency_id)
+    .maybeSingle()
+
+  if (!rawTpl) return { success: false, error: 'Template introuvable' }
+  const questions = (rawTpl as { questions: FormQuestionContent[] }).questions
+
+  // Delete existing form_question blocks for this sub-phase
+  await db(supabase)
+    .from('phase_blocks')
+    .delete()
+    .eq('sub_phase_id', subPhaseId)
+    .eq('type', 'form_question')
+
+  // Insert one block per question
+  const blocks = questions.map((q, i) => ({
+    sub_phase_id: subPhaseId,
+    phase_id: null,
+    type: 'form_question',
+    content: { ...q, answer: null } as FormQuestionContent,
+    sort_order: i + 1,
+    is_approved: false,
+    created_by: null,
+  }))
+
+  const { error } = await db(supabase).from('phase_blocks').insert(blocks)
+  if (error) return { success: false, error: error.message }
+
+  const parents = await getSubPhaseParents(supabase, subPhaseId)
+  if (parents) {
+    revalidatePath(`/projects/${parents.phase.project_id}`)
+    revalidatePath(
+      `/projects/${parents.phase.project_id}/phases/${parents.phase.id}/sub/${subPhaseId}`,
+    )
+  }
+
+  return { success: true }
+}
+
+// ── resetForm ─────────────────────────────────────────────────────
+
+export async function resetForm(subPhaseId: string): Promise<FormActionResult> {
+  const ctx = await getAdminContext()
+  if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+  const { supabase } = ctx
+
+  // Delete blocks
+  const { error } = await db(supabase)
+    .from('phase_blocks')
+    .delete()
+    .eq('sub_phase_id', subPhaseId)
+    .eq('type', 'form_question')
+
+  if (error) return { success: false, error: error.message }
+
+  // Reset status to pending if still pending/in_progress
+  await db(supabase)
+    .from('sub_phases')
+    .update({ status: 'pending', started_at: null })
+    .eq('id', subPhaseId)
+    .in('status', ['pending', 'in_progress'])
+
+  const parents = await getSubPhaseParents(supabase, subPhaseId)
+  if (parents) {
+    revalidatePath(`/projects/${parents.phase.project_id}`)
+    revalidatePath(
+      `/projects/${parents.phase.project_id}/phases/${parents.phase.id}/sub/${subPhaseId}`,
+    )
+  }
+
+  return { success: true }
+}
+
+// ── saveDraftAnswer ───────────────────────────────────────────────
+// Public — called by the client (auto-save per field, no status change)
+
+export async function saveDraftAnswer(
+  token: string,
+  blockId: string,
+  answer: string,
+): Promise<FormActionResult> {
+  const project = await resolveToken(token)
+  if (!project) return { success: false, error: 'Token invalide' }
+
+  const admin = createAdminClient()
+
+  // Fetch block + verify it belongs to this project
+  const { data: rawBlock } = await admin
+    .from('phase_blocks')
+    .select('id, content, sub_phase_id')
+    .eq('id', blockId)
+    .maybeSingle()
+
+  if (!rawBlock) return { success: false, error: 'Bloc introuvable' }
+  const block = rawBlock as {
+    id: string
+    content: FormQuestionContent
+    sub_phase_id: string | null
+  }
+
+  if (!block.sub_phase_id) return { success: false, error: 'Bloc invalide' }
+
+  const parents = await getSubPhaseParents(admin, block.sub_phase_id)
+  if (!parents || parents.phase.project_id !== project.id) {
+    return { success: false, error: 'Accès refusé' }
+  }
+
+  // Merge answer into content
+  const newContent = { ...(block.content as unknown as Record<string, unknown>), answer }
+  const { error } = await db(admin).from('phase_blocks').update({ content: newContent }).eq('id', blockId)
+  if (error) return { success: false, error: error.message }
+
+  return { success: true }
+}
+
+// ── submitFormAnswers ─────────────────────────────────────────────
+// Public — client submits the completed form → status in_review
+
+export async function submitFormAnswers(
+  token: string,
+  subPhaseId: string,
+  answers: Record<string, string>,
+): Promise<FormActionResult> {
+  const project = await resolveToken(token)
+  if (!project) return { success: false, error: 'Token invalide' }
+
+  const admin = createAdminClient()
+  const parents = await getSubPhaseParents(admin, subPhaseId)
+
+  if (!parents) return { success: false, error: 'Sous-phase introuvable' }
+  if (parents.phase.project_id !== project.id) return { success: false, error: 'Accès refusé' }
+  if (parents.sp.status !== 'in_progress') {
+    return { success: false, error: 'Formulaire non disponible' }
+  }
+
+  // Update every block's answer
+  const { data: rawBlocks } = await admin
+    .from('phase_blocks')
+    .select('id, content')
+    .eq('sub_phase_id', subPhaseId)
+    .eq('type', 'form_question')
+    .order('sort_order', { ascending: true })
+
+  const blocks = (rawBlocks as { id: string; content: FormQuestionContent }[] | null) ?? []
+
+  for (const block of blocks) {
+    const answer = answers[block.id] ?? ''
+    const newContent = { ...(block.content as unknown as Record<string, unknown>), answer }
+    await db(admin).from('phase_blocks').update({ content: newContent }).eq('id', block.id)
+  }
+
+  // Move sub-phase to in_review
+  await db(admin).from('sub_phases').update({ status: 'in_review' }).eq('id', subPhaseId)
+
+  revalidatePath(`/client/${token}`)
+  revalidatePath(
+    `/client/${token}/phases/${parents.sp.phase_id}/sub/${subPhaseId}`,
+  )
+  revalidatePath(`/projects/${project.id}`)
+  revalidatePath(
+    `/projects/${project.id}/phases/${parents.sp.phase_id}/sub/${subPhaseId}`,
+  )
+
+  return { success: true }
+}

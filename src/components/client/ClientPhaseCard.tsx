@@ -169,37 +169,60 @@ export default function ClientPhaseCard({
         </div>
       </div>
 
-      {/* ── Sous-phases visibles (in_review / completed) ────────── */}
+      {/* ── Sous-phases visibles ─────────────────────────────────── */}
       {subPhases.length > 0 && (
         <div className="ml-[52px] mt-1.5 space-y-1">
-          {subPhases.map((sp) => (
-            <div
-              key={sp.id}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0d0d0d] border border-[#1e1e1e]"
-            >
-              <span
-                className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
-                style={{
-                  backgroundColor:
-                    sp.status === 'completed' || sp.status === 'approved'
-                      ? '#22C55E'
-                      : '#F59E0B',
-                }}
-              />
-              <span className="text-[11px] text-[#666666] flex-1 truncate">{sp.name}</span>
-              <span
-                className="text-[10px] font-medium flex-shrink-0"
-                style={{
-                  color:
-                    sp.status === 'completed' || sp.status === 'approved'
-                      ? '#22C55E'
-                      : '#F59E0B',
-                }}
+          {subPhases.map((sp) => {
+            const isFormSp = sp.slug === 'formulaire' || sp.slug === 'form'
+            const spDone = sp.status === 'completed' || sp.status === 'approved'
+            const spInReview = sp.status === 'in_review'
+            const spInProgress = sp.status === 'in_progress'
+            const dotColor = spDone ? '#22C55E' : spInReview ? '#F59E0B' : '#3B82F6'
+            const formHref = `/client/${token}/phases/${phase.id}/sub/${sp.id}`
+
+            return (
+              <div
+                key={sp.id}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0d0d0d] border border-[#1e1e1e]"
               >
-                {sp.status === 'in_review' ? 'À valider' : 'Terminé'}
-              </span>
-            </div>
-          ))}
+                <span
+                  className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: dotColor }}
+                />
+                <span className="text-[11px] text-[#666666] flex-1 truncate">{sp.name}</span>
+                {/* Form sub-phase in_progress → CTA to fill */}
+                {isFormSp && spInProgress && (
+                  <Link
+                    href={formHref}
+                    className="text-[10px] font-semibold text-[#00D76B] border border-[#00D76B]/30 bg-[#00D76B]/10 rounded px-2 py-0.5 hover:bg-[#00D76B]/20 transition-colors flex-shrink-0"
+                  >
+                    À remplir
+                  </Link>
+                )}
+                {/* Form sub-phase submitted → read-only link */}
+                {isFormSp && spInReview && (
+                  <Link
+                    href={formHref}
+                    className="text-[10px] text-[#F59E0B] flex-shrink-0 hover:underline"
+                  >
+                    En attente
+                  </Link>
+                )}
+                {/* Completed */}
+                {spDone && (
+                  <span className="text-[10px] font-medium text-[#22C55E] flex-shrink-0">
+                    Terminé
+                  </span>
+                )}
+                {/* Non-form in_review */}
+                {!isFormSp && spInReview && (
+                  <span className="text-[10px] font-medium text-[#F59E0B] flex-shrink-0">
+                    À valider
+                  </span>
+                )}
+              </div>
+            )
+          })}
           {/* Connecteur vertical vers la phase suivante */}
           {!isLast && <span className="block ml-[3px] w-px h-2 bg-[#2a2a2a]" />}
         </div>

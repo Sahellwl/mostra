@@ -27,6 +27,11 @@ import FileUpload from '@/components/project/FileUpload'
 import FileVersionHistory from '@/components/project/FileVersionHistory'
 import { formatDate } from '@/lib/utils/dates'
 import { startPhase, sendToReview, completePhase } from '@/app/(dashboard)/projects/phase-actions'
+import {
+  startSubPhase,
+  sendSubPhaseToReview,
+  approveSubPhase,
+} from '@/app/(dashboard)/projects/sub-phase-actions'
 import type { PhaseFile, PhaseStatus, ProjectPhase, SubPhase, UserRole } from '@/lib/types'
 
 // ── Icônes par slug ───────────────────────────────────────────────
@@ -172,11 +177,15 @@ export default function PhaseCard({
               projectId={projectId}
               phaseId={phase.id}
               phaseStatus={phase.status}
+              canStart={canStart}
+              canAct={canAct}
+              isAdmin={isAdmin}
             />
           )}
 
-          {/* Actions (seulement si pas de sous-phases OU si phase sans sous-phases) */}
-          {!hasSubPhases && (
+          {/* Actions : comportement différent selon présence ou non de sous-phases */}
+          {!hasSubPhases ? (
+            /* Phases sans sous-phases (Animation, Rendu) → workflow fichiers complet */
             <PhaseActions
               status={phase.status}
               canStart={canStart}
@@ -190,23 +199,24 @@ export default function PhaseCard({
               onReview={() => handle('review')}
               onComplete={() => handle('complete')}
             />
-          )}
-
-          {/* Pour les phases avec sous-phases : actions de niveau phase */}
-          {hasSubPhases && (
-            <PhaseActions
-              status={phase.status}
-              canStart={canStart}
-              canAct={canAct}
-              isAdmin={isAdmin}
-              fileCount={files.length}
-              loading={loading}
-              viewHref={`/projects/${projectId}/phases/${phase.id}/view`}
-              onStart={() => handle('start')}
-              onUpload={() => setUploadOpen(true)}
-              onReview={() => handle('review')}
-              onComplete={() => handle('complete')}
-            />
+          ) : (
+            /* Phases avec sous-phases → seul "Démarrer" est visible au niveau phase (si pending)
+               Les sous-phases gèrent Review/Approve individuellement */
+            phase.status === 'pending' && canAct && canStart ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B] hover:bg-[#00D76B]/20 transition-colors disabled:opacity-40"
+                disabled={!!loading}
+                onClick={() => handle('start')}
+              >
+                {loading === 'start' ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Play className="h-3.5 w-3.5" />
+                )}
+                Démarrer la phase
+              </button>
+            ) : null
           )}
 
           {/* Historique des fichiers (seulement pour phases sans sous-phases) */}
@@ -228,24 +238,67 @@ export default function PhaseCard({
   )
 }
 
-// ── Liste des sous-phases ─────────────────────────────────────────
+// ── Liste des sous-phases avec actions ───────────────────────────
+
+type SpLoading = Record<string, 'start' | 'review' | 'approve' | null>
 
 interface SubPhaseListProps {
   subPhases: SubPhase[]
   projectId: string
   phaseId: string
   phaseStatus: PhaseStatus
+  canStart: boolean   // la phase elle-même est démarrable (prev phase ok)
+  canAct: boolean
+  isAdmin: boolean
 }
 
-function SubPhaseList({ subPhases, projectId, phaseId, phaseStatus }: SubPhaseListProps) {
-  const phaseIsLocked = phaseStatus === 'pending'
+function SubPhaseList({
+  subPhases,
+  projectId,
+  phaseId,
+  phaseStatus,
+  canStart,
+  canAct,
+  isAdmin,
+}: SubPhaseListProps) {
+  const [spLoading, setSpLoading] = useState<SpLoading>({})
+
+  async function handleSp(
+    spId: string,
+    action: 'start' | 'review' | 'approve',
+  ) {
+    setSpLoading((prev) => ({ ...prev, [spId]: action }))
+    let result: { success: boolean; error?: string }
+    if (action === 'start') result = await startSubPhase(spId)
+    else if (action === 'review') result = await sendSubPhaseToReview(spId)
+    else result = await approveSubPhase(spId)
+    setSpLoading((prev) => ({ ...prev, [spId]: null }))
+    if (!result.success && 'error' in result) toast.error(result.error as string)
+  }
+
+  const btnBase =
+    'inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+  const btnGhost = `${btnBase} border border-[#2a2a2a] text-[#666666] hover:text-white hover:border-[#444444]`
+  const btnGreen = `${btnBase} bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B] hover:bg-[#00D76B]/20`
+  const btnAmber = `${btnBase} bg-[#22C55E]/10 border border-[#22C55E]/20 text-[#22C55E] hover:bg-[#22C55E]/20`
 
   return (
     <div className="mb-3 space-y-1.5 pl-1">
       <p className="text-[10px] text-[#444444] uppercase tracking-widest mb-2">Sous-phases</p>
-      {subPhases.map((sp) => {
-        const spIsAccessible = !phaseIsLocked && sp.status !== 'pending'
+      {subPhases.map((sp, i) => {
+        const busy = !!spLoading[sp.id]
         const spHref = `/projects/${projectId}/phases/${phaseId}/sub/${sp.id}`
+
+        // Startable si : user peut agir + phase démarrable + la sp précédente est done (ou c'est la première)
+        const prevDone =
+          i === 0 ||
+          subPhases[i - 1].status === 'completed' ||
+          subPhases[i - 1].status === 'approved'
+        // Autoriser start même si la phase parente est encore pending (startSubPhase l'auto-démarre)
+        const canStartSp = canAct && canStart && prevDone && sp.status === 'pending'
+        const canReview = canAct && sp.status === 'in_progress'
+        const canApproveSp = isAdmin && sp.status === 'in_review'
+        const canView = sp.status !== 'pending'
 
         return (
           <div
@@ -259,8 +312,8 @@ function SubPhaseList({ subPhases, projectId, phaseId, phaseStatus }: SubPhaseLi
               }
             `}
           >
+            {/* Nom + indicateur */}
             <div className="flex items-center gap-2 min-w-0">
-              {/* Indicateur statut */}
               <span
                 className="flex-shrink-0 w-1.5 h-1.5 rounded-full"
                 style={{
@@ -274,30 +327,79 @@ function SubPhaseList({ subPhases, projectId, phaseId, phaseStatus }: SubPhaseLi
                           : '#333333',
                 }}
               />
-              <span
-                className={`text-xs truncate ${
-                  phaseIsLocked ? 'text-[#444444]' : 'text-[#a0a0a0]'
-                }`}
-              >
-                {sp.name}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <StatusBadge status={sp.status} className="text-[10px]" />
-              {spIsAccessible ? (
+              {canView ? (
                 <Link
                   href={spHref}
-                  className="
-                    inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium
-                    border border-[#2a2a2a] text-[#666666]
-                    hover:text-white hover:border-[#444444] transition-colors
-                  "
+                  className="text-xs truncate text-[#a0a0a0] hover:text-white transition-colors"
                 >
+                  {sp.name}
+                </Link>
+              ) : (
+                <span className="text-xs truncate text-[#a0a0a0]">{sp.name}</span>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <StatusBadge status={sp.status} className="text-[10px]" />
+
+              {/* Voir — toujours visible dès que la sp n'est pas pending */}
+              {canView && (
+                <Link href={spHref} className={btnGhost}>
                   <Eye className="h-3 w-3" />
                   Voir
                 </Link>
-              ) : (
+              )}
+
+              {canStartSp && (
+                <button
+                  type="button"
+                  className={btnGreen}
+                  disabled={busy}
+                  onClick={() => handleSp(sp.id, 'start')}
+                >
+                  {spLoading[sp.id] === 'start' ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Play className="h-3 w-3" />
+                  )}
+                  Démarrer
+                </button>
+              )}
+
+              {canReview && (
+                <button
+                  type="button"
+                  className={btnGhost}
+                  disabled={busy}
+                  onClick={() => handleSp(sp.id, 'review')}
+                >
+                  {spLoading[sp.id] === 'review' ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Send className="h-3 w-3" />
+                  )}
+                  Review
+                </button>
+              )}
+
+              {canApproveSp && (
+                <button
+                  type="button"
+                  className={btnAmber}
+                  disabled={busy}
+                  onClick={() => handleSp(sp.id, 'approve')}
+                >
+                  {spLoading[sp.id] === 'approve' ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-3 w-3" />
+                  )}
+                  Approuver
+                </button>
+              )}
+
+              {!canStartSp && sp.status === 'pending' && (
                 <Lock className="h-3 w-3 text-[#333333]" />
               )}
             </div>

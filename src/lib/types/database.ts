@@ -208,20 +208,26 @@ export interface Invitation {
 // Block content types (contenu JSON typé par type de bloc)
 // ----------------------------------------------------------
 
+export type QuestionType = 'text' | 'textarea' | 'select' | 'radio' | 'number' | 'date'
+
 export interface FormQuestion {
   id: string
-  question: string
-  field_type: 'text' | 'textarea' | 'select'
+  label: string
+  type: QuestionType
   required: boolean
   options?: string[]
+  placeholder?: string
+  helpText?: string
 }
 
 export interface FormQuestionContent {
-  question: string
+  label: string
   answer: string | null
   required: boolean
-  field_type: 'text' | 'textarea' | 'select'
+  type: QuestionType
   options?: string[]
+  placeholder?: string
+  helpText?: string
 }
 
 export interface ScriptSectionContent {

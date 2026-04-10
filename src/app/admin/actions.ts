@@ -7,6 +7,11 @@ import { db } from '@/lib/supabase/helpers'
 import { getCurrentMember } from '@/lib/supabase/queries'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import {
+  DEFAULT_FORM_TEMPLATE_NAME,
+  DEFAULT_FORM_TEMPLATE_DESCRIPTION,
+  DEFAULT_FORM_QUESTIONS,
+} from '@/app/(dashboard)/settings/forms/schemas'
 
 export type AdminActionResult = { success: true } | { success: false; error: string }
 export type CreateAgencyResult =
@@ -221,6 +226,15 @@ export async function createAgency(input: CreateAgencyInput): Promise<CreateAgen
   await db(admin)
     .from('phase_templates')
     .insert(DEFAULT_TEMPLATES.map((t) => ({ ...t, agency_id: agencyId, is_default: true })))
+
+  // Créer le template de formulaire par défaut
+  await db(admin).from('form_templates').insert({
+    agency_id: agencyId,
+    name: DEFAULT_FORM_TEMPLATE_NAME,
+    description: DEFAULT_FORM_TEMPLATE_DESCRIPTION,
+    questions: DEFAULT_FORM_QUESTIONS,
+    is_default: true,
+  })
 
   // Créer ou récupérer le compte admin
   const {

@@ -3,15 +3,19 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ChevronRight, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { db } from '@/lib/supabase/helpers'
 import { getCurrentMember } from '@/lib/supabase/queries'
 import StatusBadge from '@/components/shared/StatusBadge'
-import type { Project, ProjectPhase, SubPhase } from '@/lib/types'
+import SubPhaseActions from '@/components/project/SubPhaseActions'
+import FormSubPhaseAdmin from '@/components/project/FormSubPhaseAdmin'
+import type { Project, ProjectPhase, SubPhase, FormTemplate, FormQuestionContent, UserRole } from '@/lib/types'
 
 interface SubPhasePageProps {
   params: { id: string; phaseId: string; subPhaseId: string }
 }
 
-// Descriptions par slug de sous-phase
+const FORM_SLUGS = ['formulaire', 'form']
+
 const SUB_PHASE_META: Record<string, { label: string; description: string; sprint: string }> = {
   formulaire: {
     label: 'Formulaire de brief',
@@ -73,6 +77,9 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
   const membership = await getCurrentMember(supabase, user.id)
   if (!membership) notFound()
 
+  const userRole = membership.member.role as UserRole
+  const isAdmin = userRole === 'super_admin' || userRole === 'agency_admin'
+
   // Projet
   const { data: rawProject } = await supabase
     .from('projects')
@@ -92,25 +99,61 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
     .eq('project_id', params.id)
     .maybeSingle()
 
-  const phase = rawPhase as Pick<
-    ProjectPhase,
-    'id' | 'name' | 'slug' | 'status' | 'project_id'
-  > | null
+  const phase = rawPhase as Pick<ProjectPhase, 'id' | 'name' | 'slug' | 'status' | 'project_id'> | null
   if (!phase) notFound()
 
   // Sous-phase
   const { data: rawSubPhase } = await supabase
     .from('sub_phases')
-    .select('id, name, slug, status, phase_id, started_at, completed_at')
+    .select('id, name, slug, status, phase_id, sort_order, started_at, completed_at')
     .eq('id', params.subPhaseId)
     .eq('phase_id', params.phaseId)
     .maybeSingle()
 
   const subPhase = rawSubPhase as Pick<
     SubPhase,
-    'id' | 'name' | 'slug' | 'status' | 'phase_id' | 'started_at' | 'completed_at'
+    'id' | 'name' | 'slug' | 'status' | 'phase_id' | 'sort_order' | 'started_at' | 'completed_at'
   > | null
   if (!subPhase) notFound()
+
+  // Siblings pour canStart
+  const { data: rawSiblings } = await supabase
+    .from('sub_phases')
+    .select('id, sort_order, status')
+    .eq('phase_id', params.phaseId)
+    .order('sort_order', { ascending: true })
+
+  const siblings = (rawSiblings as Pick<SubPhase, 'id' | 'sort_order' | 'status'>[] | null) ?? []
+  const idx = siblings.findIndex((s) => s.id === params.subPhaseId)
+  const canStart =
+    idx === 0 ||
+    (idx > 0 &&
+      (siblings[idx - 1].status === 'completed' || siblings[idx - 1].status === 'approved'))
+
+  const isFormSubPhase = FORM_SLUGS.includes(subPhase.slug)
+
+  // Data spécifique formulaire
+  let formBlocks: { id: string; content: FormQuestionContent; sort_order: number }[] = []
+  let formTemplates: FormTemplate[] = []
+
+  if (isFormSubPhase && isAdmin) {
+    const [{ data: rawBlocks }, { data: rawTemplates }] = await Promise.all([
+      db(supabase)
+        .from('phase_blocks')
+        .select('id, content, sort_order')
+        .eq('sub_phase_id', params.subPhaseId)
+        .eq('type', 'form_question')
+        .order('sort_order', { ascending: true }),
+      db(supabase)
+        .from('form_templates')
+        .select('id, name, description, questions, is_default')
+        .eq('agency_id', membership.member.agency_id)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: true }),
+    ])
+    formBlocks = (rawBlocks ?? []) as { id: string; content: FormQuestionContent; sort_order: number }[]
+    formTemplates = (rawTemplates ?? []) as FormTemplate[]
+  }
 
   const meta = SUB_PHASE_META[subPhase.slug]
 
@@ -133,7 +176,7 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
           <span className="text-white font-medium">{subPhase.name}</span>
         </nav>
 
-        {/* Bouton retour */}
+        {/* Retour */}
         <Link
           href={`/projects/${project.id}`}
           className="inline-flex items-center gap-1.5 text-xs text-[#666666] hover:text-white transition-colors"
@@ -147,41 +190,60 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
           <div>
             <p className="text-xs text-[#444444] uppercase tracking-widest mb-1">{phase.name}</p>
             <h1 className="text-xl font-bold text-white">{subPhase.name}</h1>
-            {meta && (
-              <p className="text-xs text-[#555555] mt-1">{meta.label}</p>
-            )}
+            {meta && <p className="text-xs text-[#555555] mt-1">{meta.label}</p>}
           </div>
           <StatusBadge status={subPhase.status} className="flex-shrink-0" />
         </div>
 
-        {/* Placeholder */}
-        <div className="bg-[#111111] border border-[#2a2a2a] rounded-2xl p-10 text-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center mx-auto">
-            <Clock className="h-6 w-6 text-[#333333]" />
-          </div>
+        {/* Actions standard (Démarrer / Envoyer en review / Approuver) — masquées pour formulaire */}
+        {!isFormSubPhase && (
+          <SubPhaseActions
+            subPhaseId={subPhase.id}
+            subPhaseStatus={subPhase.status}
+            userRole={userRole}
+            canStart={canStart}
+          />
+        )}
 
-          <div>
-            <h2 className="text-sm font-semibold text-white mb-1">
-              Contenu à venir
-            </h2>
-            <p className="text-xs text-[#555555] max-w-sm mx-auto">
-              {meta?.description ?? `L'interface pour la sous-phase "${subPhase.name}" sera disponible dans un prochain sprint.`}
-            </p>
-          </div>
+        {/* Interface formulaire */}
+        {isFormSubPhase && isAdmin && (
+          <FormSubPhaseAdmin
+            subPhaseId={subPhase.id}
+            subPhaseStatus={subPhase.status}
+            canStart={canStart}
+            blocks={formBlocks}
+            templates={formTemplates}
+            projectId={project.id}
+            phaseId={phase.id}
+          />
+        )}
 
-          {meta && (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
-              <span className="text-[10px] text-[#444444] uppercase tracking-widest">Développé en</span>
-              <span className="text-xs text-[#00D76B] font-medium">{meta.sprint}</span>
+        {/* Placeholder pour les autres sous-phases */}
+        {!isFormSubPhase && (
+          <div className="bg-[#111111] border border-[#2a2a2a] rounded-2xl p-10 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center mx-auto">
+              <Clock className="h-6 w-6 text-[#333333]" />
             </div>
-          )}
-
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="text-[10px] text-[#333333] font-mono bg-[#0d0d0d] border border-[#1e1e1e] px-2 py-1 rounded">
-              slug: {subPhase.slug}
-            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-white mb-1">Contenu à venir</h2>
+              <p className="text-xs text-[#555555] max-w-sm mx-auto">
+                {meta?.description ??
+                  `L'interface pour la sous-phase "${subPhase.name}" sera disponible dans un prochain sprint.`}
+              </p>
+            </div>
+            {meta && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
+                <span className="text-[10px] text-[#444444] uppercase tracking-widest">Développé en</span>
+                <span className="text-xs text-[#00D76B] font-medium">{meta.sprint}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="text-[10px] text-[#333333] font-mono bg-[#0d0d0d] border border-[#1e1e1e] px-2 py-1 rounded">
+                slug: {subPhase.slug}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
     </div>

@@ -31,7 +31,9 @@ export default async function ClientProjectPage({ params }: ClientProjectPagePro
 
   const phases = (rawPhases as ProjectPhase[] | null) ?? []
 
-  // 3. Sous-phases (uniquement in_review ou completed — ce que le client peut voir)
+  // 3. Sous-phases visibles par le client :
+  //    - in_progress : formulaire en attente de remplissage
+  //    - in_review, completed, approved : terminées ou à valider
   const subPhasesByPhase: Record<string, SubPhase[]> = {}
   if (phases.length > 0) {
     const phaseIds = phases.map((p) => p.id)
@@ -39,7 +41,7 @@ export default async function ClientProjectPage({ params }: ClientProjectPagePro
       .from('sub_phases')
       .select('*')
       .in('phase_id', phaseIds)
-      .in('status', ['in_review', 'completed', 'approved'])
+      .in('status', ['in_progress', 'in_review', 'completed', 'approved'])
       .order('sort_order', { ascending: true })
     ;(rawSubPhases as SubPhase[] | null)?.forEach((sp) => {
       if (!subPhasesByPhase[sp.phase_id]) subPhasesByPhase[sp.phase_id] = []

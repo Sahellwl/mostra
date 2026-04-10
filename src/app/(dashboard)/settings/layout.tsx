@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Settings, Users, GitBranch, Palette } from 'lucide-react'
+import { Settings, Users, GitBranch, Palette, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentMember } from '@/lib/supabase/queries'
 
@@ -8,6 +8,7 @@ const NAV = [
   { href: '/settings', label: 'Général', icon: Settings },
   { href: '/settings/team', label: 'Équipe', icon: Users },
   { href: '/settings/pipeline', label: 'Pipeline', icon: GitBranch },
+  { href: '/settings/forms', label: 'Formulaires', icon: FileText },
   { href: '/settings/branding', label: 'Branding', icon: Palette, disabled: true },
 ]
 

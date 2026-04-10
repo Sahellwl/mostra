@@ -23,6 +23,7 @@ export type {
   ActivityLog,
   Invitation,
   // Block content types
+  QuestionType,
   FormQuestion,
   FormQuestionContent,
   ScriptSectionContent,
