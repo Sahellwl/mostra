@@ -22,7 +22,7 @@ export default async function PipelineSettingsPage() {
   // Fetch les templates actifs (is_default = true), triés par sort_order
   const { data: rawTemplates } = await db(supabase)
     .from('phase_templates')
-    .select('id, agency_id, name, slug, icon, sort_order, is_default, created_at')
+    .select('id, agency_id, name, slug, icon, sort_order, is_default, sub_phases, created_at')
     .eq('agency_id', member.agency_id)
     .eq('is_default', true)
     .order('sort_order', { ascending: true })

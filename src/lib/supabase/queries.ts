@@ -11,6 +11,7 @@ import type {
   Project,
   ProjectPhase,
   ProjectSummary,
+  SubPhase,
   UserRole,
 } from '@/lib/types'
 
@@ -209,6 +210,7 @@ export interface ProjectDetailData {
   client: Profile | null
   projectManager: Profile | null
   phases: ProjectPhase[]
+  subPhasesByPhase: Record<string, SubPhase[]>
   filesByPhase: Record<string, PhaseFile[]>
   comments: CommentWithDetails[]
   activity: ActivityWithUser[]
@@ -237,7 +239,22 @@ export async function getProjectDetail(
 
   const phases = (rawPhases as ProjectPhase[] | null) ?? []
 
-  // 2b. Fichiers par phase (ordonnés par version décroissante)
+  // 2b. Sous-phases par phase (ordonnées par sort_order)
+  const subPhasesByPhase: Record<string, SubPhase[]> = {}
+  if (phases.length > 0) {
+    const phaseIds = phases.map((p) => p.id)
+    const { data: rawSubPhases } = await supabase
+      .from('sub_phases')
+      .select('*')
+      .in('phase_id', phaseIds)
+      .order('sort_order', { ascending: true })
+    ;(rawSubPhases as SubPhase[] | null)?.forEach((sp) => {
+      if (!subPhasesByPhase[sp.phase_id]) subPhasesByPhase[sp.phase_id] = []
+      subPhasesByPhase[sp.phase_id].push(sp)
+    })
+  }
+
+  // 2c. Fichiers par phase (ordonnés par version décroissante)
   const filesByPhase: Record<string, PhaseFile[]> = {}
   if (phases.length > 0) {
     const phaseIds = phases.map((p) => p.id)
@@ -318,6 +335,7 @@ export async function getProjectDetail(
     client,
     projectManager,
     phases,
+    subPhasesByPhase,
     filesByPhase,
     comments: comments.map((c) => ({
       ...c,

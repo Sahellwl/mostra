@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/supabase/helpers'
 import { getCurrentMember } from '@/lib/supabase/queries'
-import type { AgencyMember } from '@/lib/types'
+import type { AgencyMember, SubPhaseDefinition } from '@/lib/types'
 
 export type PipelineActionResult = { success: true } | { success: false; error: string }
 
@@ -14,6 +14,7 @@ export interface PipelinePhaseRow {
   slug: string
   icon: string
   sort_order: number
+  sub_phases: SubPhaseDefinition[]
 }
 
 export type ResetResult =
@@ -26,6 +27,7 @@ export interface PipelinePhaseInput {
   slug: string
   icon: string
   sort_order: number
+  sub_phases: SubPhaseDefinition[]
 }
 
 // ── Permission helper ────────────────────────────────────────────
@@ -51,16 +53,6 @@ async function requireAdmin(): Promise<
 }
 
 // ── updatePhaseTemplates ─────────────────────────────────────────
-//
-// Stratégie fiable sans upsert ambigu :
-//   • UPDATE explicite pour les phases existantes (by id)
-//   • INSERT pour les nouvelles phases (pas d'id)
-//   • UPDATE is_default=false pour les phases retirées (soft-remove)
-//
-// Cela évite les problèmes de ON CONFLICT DO UPDATE SET id=EXCLUDED.id
-// qui peut être silencieusement ignoré par certaines versions de PostgREST.
-//
-// ────────────────────────────────────────────────────────────────
 
 export async function updatePhaseTemplates(
   phases: PipelinePhaseInput[],
@@ -80,6 +72,11 @@ export async function updatePhaseTemplates(
     ...p,
     name: p.name.trim(),
     slug: p.slug.trim(),
+    sub_phases: (p.sub_phases ?? []).map((sp) => ({
+      name: sp.name.trim(),
+      slug: sp.slug.trim(),
+      sort_order: sp.sort_order,
+    })),
   }))
 
   for (const p of trimmed) {
@@ -112,7 +109,6 @@ export async function updatePhaseTemplates(
 
   const existingIds = new Set<string>((existingRows ?? []).map((r: { id: string }) => r.id))
 
-  // IDs présents dans la liste sauvegardée
   const incomingIds = new Set<string>(
     trimmed.filter((p) => p.id !== null && existingIds.has(p.id!)).map((p) => p.id!),
   )
@@ -129,7 +125,6 @@ export async function updatePhaseTemplates(
       .eq('agency_id', agencyId)
 
     if (error) {
-      console.error('[updatePhaseTemplates] deactivate error for id', id, ':', error)
       return { success: false, error: `Erreur lors de la désactivation : ${error.message}` }
     }
   }
@@ -139,7 +134,7 @@ export async function updatePhaseTemplates(
   const toUpdate = trimmed.filter((p) => p.id !== null && existingIds.has(p.id!))
 
   for (const phase of toUpdate) {
-    const { data: updated, error } = await db(supabase)
+    const { error } = await db(supabase)
       .from('phase_templates')
       .update({
         name: phase.name,
@@ -147,10 +142,10 @@ export async function updatePhaseTemplates(
         icon: phase.icon,
         sort_order: phase.sort_order,
         is_default: true,
+        sub_phases: phase.sub_phases,
       })
       .eq('id', phase.id)
       .eq('agency_id', agencyId)
-      .select('id, name, sort_order')
 
     if (error) {
       return {
@@ -165,7 +160,7 @@ export async function updatePhaseTemplates(
   const toInsert = trimmed.filter((p) => p.id === null || !existingIds.has(p.id!))
 
   for (const phase of toInsert) {
-    const { data: inserted, error } = await db(supabase)
+    const { error } = await db(supabase)
       .from('phase_templates')
       .insert({
         agency_id: agencyId,
@@ -174,8 +169,8 @@ export async function updatePhaseTemplates(
         icon: phase.icon,
         sort_order: phase.sort_order,
         is_default: true,
+        sub_phases: phase.sub_phases,
       })
-      .select('id, name')
 
     if (error) {
       return {
@@ -191,12 +186,59 @@ export async function updatePhaseTemplates(
 
 // ── resetToDefaults ──────────────────────────────────────────────
 
-const DEFAULT_PHASES = [
-  { name: 'Script', slug: 'script', icon: 'FileText', sort_order: 1 },
-  { name: 'Design', slug: 'design', icon: 'Palette', sort_order: 2 },
-  { name: 'Animation', slug: 'animation', icon: 'Film', sort_order: 3 },
-  { name: 'Render', slug: 'render', icon: 'MonitorPlay', sort_order: 4 },
-] as const
+const DEFAULT_PHASES: Array<{
+  name: string
+  slug: string
+  icon: string
+  sort_order: number
+  sub_phases: SubPhaseDefinition[]
+}> = [
+  {
+    name: 'Analyse',
+    slug: 'analyse',
+    icon: 'Brain',
+    sort_order: 1,
+    sub_phases: [
+      { name: 'Formulaire', slug: 'formulaire', sort_order: 1 },
+      { name: 'Script', slug: 'script', sort_order: 2 },
+    ],
+  },
+  {
+    name: 'Design',
+    slug: 'design',
+    icon: 'Palette',
+    sort_order: 2,
+    sub_phases: [
+      { name: 'Style', slug: 'style', sort_order: 1 },
+      { name: 'Storyboard', slug: 'storyboard', sort_order: 2 },
+      { name: 'Design', slug: 'design', sort_order: 3 },
+    ],
+  },
+  {
+    name: 'Audio',
+    slug: 'audio',
+    icon: 'Music',
+    sort_order: 3,
+    sub_phases: [
+      { name: 'Voix off', slug: 'vo', sort_order: 1 },
+      { name: 'Musique', slug: 'musique', sort_order: 2 },
+    ],
+  },
+  {
+    name: 'Animation',
+    slug: 'animation',
+    icon: 'Film',
+    sort_order: 4,
+    sub_phases: [],
+  },
+  {
+    name: 'Rendu',
+    slug: 'rendu',
+    icon: 'MonitorPlay',
+    sort_order: 5,
+    sub_phases: [],
+  },
+]
 
 export async function resetToDefaults(): Promise<ResetResult> {
   const auth = await requireAdmin()
@@ -211,13 +253,10 @@ export async function resetToDefaults(): Promise<ResetResult> {
     .eq('agency_id', agencyId)
 
   if (clearErr) {
-    console.error('[resetToDefaults] clear error:', clearErr)
     return { success: false, error: clearErr.message }
   }
 
-  // Upsert les 4 defaults :
-  // On utilise ici l'upsert simple sur (agency_id, slug) SANS fournir d'id,
-  // ce qui est safe : PostgreSQL insère ou réactive la ligne existante.
+  // Upsert les 5 phases par défaut
   for (const phase of DEFAULT_PHASES) {
     const { data: existing } = await db(supabase)
       .from('phase_templates')
@@ -227,7 +266,6 @@ export async function resetToDefaults(): Promise<ResetResult> {
       .maybeSingle()
 
     if (existing?.id) {
-      // Réactiver la ligne existante
       const { error } = await db(supabase)
         .from('phase_templates')
         .update({ ...phase, is_default: true })
@@ -235,7 +273,6 @@ export async function resetToDefaults(): Promise<ResetResult> {
         .eq('agency_id', agencyId)
       if (error) return { success: false, error: error.message }
     } else {
-      // Insérer une nouvelle ligne
       const { error } = await db(supabase)
         .from('phase_templates')
         .insert({ ...phase, agency_id: agencyId, is_default: true })
@@ -243,17 +280,15 @@ export async function resetToDefaults(): Promise<ResetResult> {
     }
   }
 
-  // Relire les phases actives pour les retourner au client (mise à jour du state local)
+  // Relire les phases actives
   const { data: freshRows, error: fetchErr } = await db(supabase)
     .from('phase_templates')
-    .select('id, name, slug, icon, sort_order')
+    .select('id, name, slug, icon, sort_order, sub_phases')
     .eq('agency_id', agencyId)
     .eq('is_default', true)
     .order('sort_order', { ascending: true })
 
   if (fetchErr) {
-    console.error('[resetToDefaults] fetch final error:', fetchErr)
-    // Le reset a quand même réussi — on retourne sans les phases
     revalidatePath('/settings/pipeline')
     return { success: true, phases: [] }
   }

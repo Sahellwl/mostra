@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import ClientProjectView from '@/components/client/ClientProjectView'
 import ContactManager from '@/components/client/ContactManager'
-import type { Profile, Project, ProjectPhase } from '@/lib/types'
+import type { Profile, Project, ProjectPhase, SubPhase } from '@/lib/types'
 
 interface ClientProjectPageProps {
   params: { token: string }
@@ -31,7 +31,23 @@ export default async function ClientProjectPage({ params }: ClientProjectPagePro
 
   const phases = (rawPhases as ProjectPhase[] | null) ?? []
 
-  // 3. Project Manager
+  // 3. Sous-phases (uniquement in_review ou completed — ce que le client peut voir)
+  const subPhasesByPhase: Record<string, SubPhase[]> = {}
+  if (phases.length > 0) {
+    const phaseIds = phases.map((p) => p.id)
+    const { data: rawSubPhases } = await admin
+      .from('sub_phases')
+      .select('*')
+      .in('phase_id', phaseIds)
+      .in('status', ['in_review', 'completed', 'approved'])
+      .order('sort_order', { ascending: true })
+    ;(rawSubPhases as SubPhase[] | null)?.forEach((sp) => {
+      if (!subPhasesByPhase[sp.phase_id]) subPhasesByPhase[sp.phase_id] = []
+      subPhasesByPhase[sp.phase_id].push(sp)
+    })
+  }
+
+  // 4. Project Manager
   let projectManager: Profile | null = null
   if (project.project_manager_id) {
     const { data: rawPm } = await admin
@@ -45,7 +61,12 @@ export default async function ClientProjectPage({ params }: ClientProjectPagePro
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
       {/* Gauche — vue projet */}
-      <ClientProjectView project={project} phases={phases} token={params.token} />
+      <ClientProjectView
+        project={project}
+        phases={phases}
+        subPhasesByPhase={subPhasesByPhase}
+        token={params.token}
+      />
 
       {/* Droite — contact PM */}
       <div className="space-y-4">

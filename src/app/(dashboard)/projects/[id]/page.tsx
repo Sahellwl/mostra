@@ -42,7 +42,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   // Sécurité : le projet doit appartenir à l'agence de l'utilisateur
   if (data.project.agency_id !== membership.agency?.id) notFound()
 
-  const { project, client, projectManager, phases, filesByPhase, comments, activity } = data
+  const { project, client, projectManager, phases, subPhasesByPhase, filesByPhase, comments, activity } = data
   const userRole = membership.member.role
 
   return (
@@ -113,6 +113,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                         isLast={i === phases.length - 1}
                         canStart={canStart}
                         files={filesByPhase[phase.id] ?? []}
+                        subPhases={subPhasesByPhase[phase.id] ?? []}
                         userRole={userRole}
                       />
                     )

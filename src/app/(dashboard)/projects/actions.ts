@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { db } from '@/lib/supabase/helpers'
-import type { PhaseTemplate } from '@/lib/types'
+import type { PhaseTemplate, SubPhaseDefinition } from '@/lib/types'
 
 export type CreateProjectInput = {
   name: string
@@ -162,7 +162,10 @@ export async function createProject(input: CreateProjectInput): Promise<CreatePr
     .order('sort_order', { ascending: true })
 
   if (templates && templates.length > 0) {
-    const phases = (templates as PhaseTemplate[]).map((tpl) => ({
+    const typedTemplates = templates as PhaseTemplate[]
+
+    // Créer les phases
+    const phaseRows = typedTemplates.map((tpl) => ({
       project_id: proj.id,
       phase_template_id: tpl.id,
       name: tpl.name,
@@ -171,7 +174,42 @@ export async function createProject(input: CreateProjectInput): Promise<CreatePr
       status: 'pending' as const,
     }))
 
-    await db(supabase).from('project_phases').insert(phases)
+    const { data: createdPhases } = await db(supabase)
+      .from('project_phases')
+      .insert(phaseRows)
+      .select('id, phase_template_id')
+
+    // Créer les sous-phases depuis les templates (si le template en définit)
+    if (createdPhases && createdPhases.length > 0) {
+      const templateById = new Map(typedTemplates.map((t) => [t.id, t]))
+      const subPhaseInserts: Array<{
+        phase_id: string
+        name: string
+        slug: string
+        sort_order: number
+        status: 'pending'
+      }> = []
+
+      for (const phase of createdPhases as { id: string; phase_template_id: string | null }[]) {
+        if (!phase.phase_template_id) continue
+        const tpl = templateById.get(phase.phase_template_id)
+        if (!tpl) continue
+        const sps: SubPhaseDefinition[] = Array.isArray(tpl.sub_phases) ? tpl.sub_phases : []
+        for (const sp of sps) {
+          subPhaseInserts.push({
+            phase_id: phase.id,
+            name: sp.name,
+            slug: sp.slug,
+            sort_order: sp.sort_order,
+            status: 'pending',
+          })
+        }
+      }
+
+      if (subPhaseInserts.length > 0) {
+        await db(supabase).from('sub_phases').insert(subPhaseInserts)
+      }
+    }
   }
 
   // ── Log d'activité ───────────────────────────────────────────────

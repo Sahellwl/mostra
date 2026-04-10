@@ -1,13 +1,14 @@
 import ClientPhaseCard from './ClientPhaseCard'
-import type { Project, ProjectPhase } from '@/lib/types'
+import type { Project, ProjectPhase, SubPhase } from '@/lib/types'
 
 interface ClientProjectViewProps {
   project: Project
   phases: ProjectPhase[]
+  subPhasesByPhase: Record<string, SubPhase[]>
   token: string
 }
 
-export default function ClientProjectView({ project, phases, token }: ClientProjectViewProps) {
+export default function ClientProjectView({ project, phases, subPhasesByPhase, token }: ClientProjectViewProps) {
   return (
     <div className="space-y-6">
       {/* ── Header ──────────────────────────────────────────────── */}
@@ -82,6 +83,7 @@ export default function ClientProjectView({ project, phases, token }: ClientProj
                 token={token}
                 isFirst={i === 0}
                 isLast={i === phases.length - 1}
+                subPhases={subPhasesByPhase[phase.id] ?? []}
               />
             ))
           )}
