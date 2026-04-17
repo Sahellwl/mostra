@@ -11,7 +11,7 @@ import {
   addComment,
   toggleResolveComment,
   deleteComment,
-} from '@/app/(app)/projects/comment-actions'
+} from '@/app/projects/comment-actions'
 import { useRealtimeComments } from '@/lib/hooks/useRealtimeComments'
 import type { CommentWithDetails } from '@/lib/supabase/queries'
 import type { UserRole } from '@/lib/types'

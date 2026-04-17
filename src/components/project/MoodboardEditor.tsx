@@ -23,14 +23,14 @@ import {
   updateMoodboardBlock,
   deleteMoodboardBlock,
   type MoodboardBlock,
-} from '@/app/(app)/projects/moodboard-actions'
+} from '@/app/projects/moodboard-actions'
 import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
   unapproveSubPhase,
-} from '@/app/(app)/projects/sub-phase-actions'
-import { addComment, toggleResolveComment } from '@/app/(app)/projects/comment-actions'
+} from '@/app/projects/sub-phase-actions'
+import { addComment, toggleResolveComment } from '@/app/projects/comment-actions'
 import {
   useRealtimeBlockComments,
   type BlockComment,

@@ -35,13 +35,13 @@ import {
 import { toast } from 'sonner'
 import { formatRelative } from '@/lib/utils/dates'
 import ColorPicker from '@/components/project/ColorPicker'
-import { saveScriptBlocks } from '@/app/(app)/projects/script-actions'
-import { addComment, toggleResolveComment } from '@/app/(app)/projects/comment-actions'
+import { saveScriptBlocks } from '@/app/projects/script-actions'
+import { addComment, toggleResolveComment } from '@/app/projects/comment-actions'
 import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
-} from '@/app/(app)/projects/sub-phase-actions'
+} from '@/app/projects/sub-phase-actions'
 import {
   useRealtimeBlockComments,
   type BlockComment,

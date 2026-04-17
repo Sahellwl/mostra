@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Trash2, ChevronDown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { removeMember, changeMemberRole } from '@/app/(app)/settings/actions'
+import { removeMember, changeMemberRole } from '@/app/settings/actions'
 import type { UserRole } from '@/lib/types'
 
 const ROLE_LABELS: Record<string, string> = {

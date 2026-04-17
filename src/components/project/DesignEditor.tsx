@@ -21,19 +21,19 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatRelative } from '@/lib/utils/dates'
-import { addComment, toggleResolveComment } from '@/app/(app)/projects/comment-actions'
+import { addComment, toggleResolveComment } from '@/app/projects/comment-actions'
 import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
   unapproveSubPhase,
-} from '@/app/(app)/projects/sub-phase-actions'
+} from '@/app/projects/sub-phase-actions'
 import {
   uploadDesignFiles,
   updateDesignFileDescription,
   deleteDesignFile,
   type DesignFile,
-} from '@/app/(app)/projects/design-actions'
+} from '@/app/projects/design-actions'
 import {
   useRealtimeBlockComments,
   type BlockComment,

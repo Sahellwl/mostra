@@ -12,11 +12,11 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { applyFormTemplate, resetForm } from '@/app/(app)/projects/form-actions'
+import { applyFormTemplate, resetForm } from '@/app/projects/form-actions'
 import {
   startSubPhase,
   approveSubPhase,
-} from '@/app/(app)/projects/sub-phase-actions'
+} from '@/app/projects/sub-phase-actions'
 import type { FormTemplate, FormQuestionContent, PhaseStatus } from '@/lib/types'
 
 // ── Types ─────────────────────────────────────────────────────────

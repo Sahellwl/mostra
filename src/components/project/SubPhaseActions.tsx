@@ -7,7 +7,7 @@ import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
-} from '@/app/(app)/projects/sub-phase-actions'
+} from '@/app/projects/sub-phase-actions'
 import type { PhaseStatus, UserRole } from '@/lib/types'
 
 interface SubPhaseActionsProps {

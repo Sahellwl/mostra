@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
-import { acceptInvitation } from '@/app/(app)/settings/actions'
+import { acceptInvitation } from '@/app/settings/actions'
 
 const schema = z
   .object({

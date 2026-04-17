@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { deleteFormTemplate } from '@/app/(app)/settings/forms/actions'
+import { deleteFormTemplate } from '@/app/settings/forms/actions'
 
 export default function DeleteTemplateButton({ templateId }: { templateId: string }) {
   const router = useRouter()

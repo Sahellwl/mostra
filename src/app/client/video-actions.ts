@@ -4,7 +4,7 @@ import { revalidatePath, unstable_noStore as noStore } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { db } from '@/lib/supabase/helpers'
 import type { Project, ProjectPhase, Profile } from '@/lib/types'
-import type { VideoFile, VideoComment } from '@/app/(app)/projects/video-actions'
+import type { VideoFile, VideoComment } from '@/app/projects/video-actions'
 
 export type VideoClientResult = { success: true } | { success: false; error: string }
 

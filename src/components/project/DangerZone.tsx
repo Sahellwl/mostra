@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Trash2, Archive, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { deleteProject, archiveProject } from '@/app/(app)/projects/actions'
+import { deleteProject, archiveProject } from '@/app/projects/actions'
 
 interface Props {
   projectId: string

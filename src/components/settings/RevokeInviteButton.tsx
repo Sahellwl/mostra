@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { revokeInvitation } from '@/app/(app)/settings/actions'
+import { revokeInvitation } from '@/app/settings/actions'
 
 export default function RevokeInviteButton({
   invitationId,
