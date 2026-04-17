@@ -2,24 +2,25 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import { Toaster } from 'sonner'
+import SettingsNav from './SettingsNav'
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Sidebar />
 
-      {/* Main content — offset par la sidebar */}
       <main className="md:ml-[180px] min-h-screen">
-        <div className="px-4 md:px-8 py-8">{children}</div>
+        <div className="px-4 md:px-8 py-8">
+          <SettingsNav />
+          {children}
+        </div>
       </main>
 
       <Toaster

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import { Toaster } from 'sonner'
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function ProjectsLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const {
     data: { user },
