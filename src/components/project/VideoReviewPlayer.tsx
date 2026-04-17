@@ -26,20 +26,20 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { PhaseStatus, UserRole } from '@/lib/types'
-import type { VideoFile, VideoComment } from '@/app/(dashboard)/projects/video-actions'
+import type { VideoFile, VideoComment } from '@/app/(app)/projects/video-actions'
 import {
   getVideoData,
   uploadVideo,
   addTimecodedComment,
   resolveVideoComment,
   deleteVideoComment,
-} from '@/app/(dashboard)/projects/video-actions'
+} from '@/app/(app)/projects/video-actions'
 import {
   startPhase,
   sendToReview,
   completePhase,
   unapprovePhase,
-} from '@/app/(dashboard)/projects/phase-actions'
+} from '@/app/(app)/projects/phase-actions'
 
 // ── Helpers ───────────────────────────────────────────────────────
 

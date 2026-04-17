@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { UploadCloud, X, FileIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { uploadFile } from '@/app/(dashboard)/projects/file-actions'
+import { uploadFile } from '@/app/(app)/projects/file-actions'
 import { formatFileSize } from '@/lib/utils/files'
 
 // ── Types MIME acceptés ───────────────────────────────────────────

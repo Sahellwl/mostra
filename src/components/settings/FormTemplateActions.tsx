@@ -8,7 +8,7 @@ import {
   duplicateFormTemplate,
   deleteFormTemplate,
   setDefaultFormTemplate,
-} from '@/app/(dashboard)/settings/forms/actions'
+} from '@/app/(app)/settings/forms/actions'
 
 interface FormTemplateActionsProps {
   templateId: string

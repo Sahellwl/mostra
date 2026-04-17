@@ -16,19 +16,19 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatRelative } from '@/lib/utils/dates'
-import { addComment, toggleResolveComment } from '@/app/(dashboard)/projects/comment-actions'
+import { addComment, toggleResolveComment } from '@/app/(app)/projects/comment-actions'
 import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
   unapproveSubPhase,
-} from '@/app/(dashboard)/projects/sub-phase-actions'
+} from '@/app/(app)/projects/sub-phase-actions'
 import {
   createAudioTrack,
   updateAudioTrack,
   deleteAudioTrack,
   type AudioTrack,
-} from '@/app/(dashboard)/projects/audio-actions'
+} from '@/app/(app)/projects/audio-actions'
 import {
   useRealtimeBlockComments,
   type BlockComment,

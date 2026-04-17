@@ -32,11 +32,11 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import IconPicker from './IconPicker'
-import { updatePhaseTemplates, resetToDefaults } from '@/app/(dashboard)/settings/pipeline-actions'
+import { updatePhaseTemplates, resetToDefaults } from '@/app/(app)/settings/pipeline-actions'
 import type {
   PipelinePhaseInput,
   PipelinePhaseRow,
-} from '@/app/(dashboard)/settings/pipeline-actions'
+} from '@/app/(app)/settings/pipeline-actions'
 import type { PhaseTemplate, SubPhaseDefinition } from '@/lib/types'
 
 // ── Helpers ──────────────────────────────────────────────────────

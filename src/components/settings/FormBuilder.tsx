@@ -37,7 +37,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createFormTemplate, updateFormTemplate } from '@/app/(dashboard)/settings/forms/actions'
+import { createFormTemplate, updateFormTemplate } from '@/app/(app)/settings/forms/actions'
 import type { FormQuestion, QuestionType } from '@/lib/types'
 
 // ── Types ─────────────────────────────────────────────────────────

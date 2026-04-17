@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { PhaseStatus } from '@/lib/types'
-import type { VideoFile, VideoComment } from '@/app/(dashboard)/projects/video-actions'
+import type { VideoFile, VideoComment } from '@/app/(app)/projects/video-actions'
 import {
   fetchVideoData,
   addClientVideoComment,

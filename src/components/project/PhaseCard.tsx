@@ -27,13 +27,13 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import FileUpload from '@/components/project/FileUpload'
 import FileVersionHistory from '@/components/project/FileVersionHistory'
 import { formatDate } from '@/lib/utils/dates'
-import { startPhase, sendToReview, completePhase, unapprovePhase } from '@/app/(dashboard)/projects/phase-actions'
+import { startPhase, sendToReview, completePhase, unapprovePhase } from '@/app/(app)/projects/phase-actions'
 import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
   unapproveSubPhase,
-} from '@/app/(dashboard)/projects/sub-phase-actions'
+} from '@/app/(app)/projects/sub-phase-actions'
 import type { PhaseFile, PhaseStatus, ProjectPhase, SubPhase, UserRole } from '@/lib/types'
 
 // ── Icônes par slug ───────────────────────────────────────────────

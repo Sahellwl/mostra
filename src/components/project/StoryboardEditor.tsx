@@ -42,14 +42,14 @@ import {
   deleteStoryboardShot,
   reorderStoryboardShots,
   type StoryboardShot,
-} from '@/app/(dashboard)/projects/storyboard-actions'
+} from '@/app/(app)/projects/storyboard-actions'
 import {
   startSubPhase,
   sendSubPhaseToReview,
   approveSubPhase,
   unapproveSubPhase,
-} from '@/app/(dashboard)/projects/sub-phase-actions'
-import { addComment, toggleResolveComment } from '@/app/(dashboard)/projects/comment-actions'
+} from '@/app/(app)/projects/sub-phase-actions'
+import { addComment, toggleResolveComment } from '@/app/(app)/projects/comment-actions'
 import {
   useRealtimeBlockComments,
   type BlockComment,

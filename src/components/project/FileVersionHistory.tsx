@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Download, Eye, FileText, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getSignedUrl } from '@/app/(dashboard)/projects/file-actions'
+import { getSignedUrl } from '@/app/(app)/projects/file-actions'
 import { formatFileSize } from '@/lib/utils/files'
 import { formatDate } from '@/lib/utils/dates'
 import type { PhaseFile } from '@/lib/types'

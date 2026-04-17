@@ -11,7 +11,7 @@ import {
   DEFAULT_FORM_TEMPLATE_NAME,
   DEFAULT_FORM_TEMPLATE_DESCRIPTION,
   DEFAULT_FORM_QUESTIONS,
-} from '@/app/(dashboard)/settings/forms/schemas'
+} from '@/app/(app)/settings/forms/schemas'
 
 export type AdminActionResult = { success: true } | { success: false; error: string }
 export type CreateAgencyResult =

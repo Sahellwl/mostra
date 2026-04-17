@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { sendInvitation } from '@/app/(dashboard)/settings/actions'
+import { sendInvitation } from '@/app/(app)/settings/actions'
 
 const schema = z.object({
   email: z.string().min(1, 'Email requis').email('Email invalide'),
