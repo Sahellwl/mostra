@@ -104,7 +104,7 @@ export default function RegisterPage() {
             id="full_name"
             type="text"
             autoComplete="name"
-            placeholder="Tarik Lebailly"
+            placeholder="Jean Dupont"
             {...register('full_name')}
             className="
               w-full px-3 py-2.5 rounded-lg text-sm
