@@ -99,7 +99,7 @@ export async function fetchVideoData(
 
   // Sign all file URLs
   const files = await Promise.all(
-    ((rawFiles ?? []) as Omit<VideoFile, 'file_url'> & { file_url: string }[]).map(async (f) => {
+    ((rawFiles ?? []) as unknown as (Omit<VideoFile, 'file_url'> & { file_url: string })[]).map(async (f) => {
       const storagePath = extractStoragePath(f.file_url)
       if (!storagePath) return { ...f, file_url: '' }
       const signedUrl = await generateSignedUrl(admin, storagePath)

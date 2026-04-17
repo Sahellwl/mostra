@@ -112,7 +112,7 @@ export async function getVideoData(phaseId: string): Promise<{
 
   // Generate signed URLs
   const files = await Promise.all(
-    ((rawFiles ?? []) as Omit<VideoFile, 'file_url'> & { file_url: string }[]).map(async (f) => {
+    ((rawFiles ?? []) as unknown as (Omit<VideoFile, 'file_url'> & { file_url: string })[]).map(async (f) => {
       const storagePath = extractStoragePath(f.file_url)
       if (!storagePath) return { ...f, file_url: '' }
       const signedUrl = await generateSignedUrl(admin, storagePath)
@@ -206,7 +206,7 @@ export async function uploadVideo(formData: FormData): Promise<
 
   // Mark previous version as not current
   if (nextVersion > 1) {
-    await admin.from('phase_files').update({ is_current: false }).eq('phase_id', phaseId)
+    await db(admin).from('phase_files').update({ is_current: false }).eq('phase_id', phaseId)
   }
 
   const { data: rawFile, error: insertErr } = await db(admin)
