@@ -47,6 +47,11 @@ export async function middleware(request: NextRequest) {
       .maybeSingle()
 
     const role = (memberData as { role: string } | null)?.role ?? null
+
+    // Si l'utilisateur est auth mais sans membership actif → ne pas rediriger
+    // (évite la boucle infinie avec dashboard/page.tsx qui redirige vers /login)
+    if (!role) return supabaseResponse
+
     const url = request.nextUrl.clone()
     url.pathname = getDashboardByRole(role)
     url.search = ''

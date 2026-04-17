@@ -19,8 +19,9 @@ export default async function DashboardPage() {
 
   const memberData = await getCurrentMember(supabase, user.id)
 
-  // Si pas de membre actif → logout gracieux
+  // Si pas de membre actif → sign out pour éviter la boucle middleware ↔ dashboard
   if (!memberData?.member) {
+    await supabase.auth.signOut()
     redirect('/login')
   }
 

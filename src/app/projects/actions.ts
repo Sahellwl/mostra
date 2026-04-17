@@ -194,16 +194,21 @@ export async function createProject(input: CreateProjectInput): Promise<CreatePr
         if (!phase.phase_template_id) continue
         const tpl = templateById.get(phase.phase_template_id)
         if (!tpl) continue
-        const sps: SubPhaseDefinition[] = Array.isArray(tpl.sub_phases) ? tpl.sub_phases : []
-        for (const sp of sps) {
+
+        const rawSps = typeof tpl.sub_phases === 'string'
+          ? JSON.parse(tpl.sub_phases)
+          : tpl.sub_phases
+        const sps: SubPhaseDefinition[] = Array.isArray(rawSps) ? rawSps : []
+
+        sps.forEach((sp, idx) => {
           subPhaseInserts.push({
             phase_id: phase.id,
             name: sp.name,
             slug: sp.slug,
-            sort_order: sp.sort_order,
+            sort_order: sp.sort_order ?? idx + 1,
             status: 'pending',
           })
-        }
+        })
       }
 
       if (subPhaseInserts.length > 0) {
