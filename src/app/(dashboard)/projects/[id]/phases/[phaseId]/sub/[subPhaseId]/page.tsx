@@ -9,6 +9,14 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import SubPhaseActions from '@/components/project/SubPhaseActions'
 import FormSubPhaseAdmin from '@/components/project/FormSubPhaseAdmin'
 import ScriptEditor from '@/components/project/ScriptEditor'
+import MoodboardEditor from '@/components/project/MoodboardEditor'
+import StoryboardEditor from '@/components/project/StoryboardEditor'
+import DesignEditor from '@/components/project/DesignEditor'
+import AudioEditor from '@/components/project/AudioEditor'
+import { getMoodboardBlocks, type MoodboardBlock } from '@/app/(dashboard)/projects/moodboard-actions'
+import { getStoryboardShots, type StoryboardShot } from '@/app/(dashboard)/projects/storyboard-actions'
+import { getDesignFiles, type DesignFile } from '@/app/(dashboard)/projects/design-actions'
+import { getAudioTracks, type AudioTrack } from '@/app/(dashboard)/projects/audio-actions'
 import type { Project, ProjectPhase, SubPhase, FormTemplate, FormQuestionContent, ScriptSectionContent, UserRole, Profile } from '@/lib/types'
 import type { BlockComment } from '@/lib/hooks/useRealtimeBlockComments'
 
@@ -18,6 +26,10 @@ interface SubPhasePageProps {
 
 const FORM_SLUGS = ['formulaire', 'form']
 const SCRIPT_SLUGS = ['script']
+const MOODBOARD_SLUGS = ['style', 'moodboard']
+const STORYBOARD_SLUGS = ['storyboard']
+const DESIGN_SLUGS = ['design']
+const AUDIO_SLUGS = ['vo', 'musique', 'voix-off']
 
 const SUB_PHASE_META: Record<string, { label: string; description: string; sprint: string }> = {
   formulaire: {
@@ -135,6 +147,10 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
 
   const isFormSubPhase = FORM_SLUGS.includes(subPhase.slug)
   const isScriptSubPhase = SCRIPT_SLUGS.includes(subPhase.slug)
+  const isMoodboardSubPhase = MOODBOARD_SLUGS.includes(subPhase.slug)
+  const isStoryboardSubPhase = STORYBOARD_SLUGS.includes(subPhase.slug)
+  const isDesignSubPhase = DESIGN_SLUGS.includes(subPhase.slug)
+  const isAudioSubPhase = AUDIO_SLUGS.includes(subPhase.slug)
 
   // Data spécifique formulaire
   let formBlocks: { id: string; content: FormQuestionContent; sort_order: number }[] = []
@@ -210,6 +226,160 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
     }))
   }
 
+  // Data spécifique storyboard
+  let storyboardShots: StoryboardShot[] = []
+  let storyboardComments: BlockComment[] = []
+
+  if (isStoryboardSubPhase) {
+    storyboardShots = await getStoryboardShots(params.subPhaseId)
+
+    const { data: rawSbComments } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('sub_phase_id', params.subPhaseId)
+      .order('created_at', { ascending: true })
+
+    const rawSbCommentList = (rawSbComments ?? []) as {
+      id: string; block_id: string | null; sub_phase_id: string | null
+      phase_id: string | null; user_id: string; content: string
+      is_resolved: boolean; created_at: string; updated_at: string
+    }[]
+
+    const sbAuthorIds = [...new Set(rawSbCommentList.map((c) => c.user_id))]
+    const sbAuthorMap = new Map<string, Pick<Profile, 'id' | 'full_name' | 'avatar_url'>>()
+    if (sbAuthorIds.length > 0) {
+      const { data: rawAuthors } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', sbAuthorIds)
+      ;(rawAuthors as Pick<Profile, 'id' | 'full_name' | 'avatar_url'>[] | null)?.forEach((p) =>
+        sbAuthorMap.set(p.id, p),
+      )
+    }
+    storyboardComments = rawSbCommentList.map((c) => ({
+      ...c,
+      author: sbAuthorMap.get(c.user_id) ?? null,
+    }))
+  }
+
+  // Data spécifique design
+  let designFiles: DesignFile[] = []
+  let designComments: BlockComment[] = []
+
+  if (isDesignSubPhase) {
+    designFiles = await getDesignFiles(params.subPhaseId)
+
+    const { data: rawDesignComments } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('sub_phase_id', params.subPhaseId)
+      .order('created_at', { ascending: true })
+
+    const rawDesignCommentList = (rawDesignComments ?? []) as {
+      id: string; block_id: string | null; sub_phase_id: string | null
+      phase_id: string | null; user_id: string; content: string
+      is_resolved: boolean; created_at: string; updated_at: string
+    }[]
+
+    const designAuthorIds = [...new Set(rawDesignCommentList.map((c) => c.user_id))]
+    const designAuthorMap = new Map<string, Pick<Profile, 'id' | 'full_name' | 'avatar_url'>>()
+    if (designAuthorIds.length > 0) {
+      const { data: rawAuthors } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', designAuthorIds)
+      ;(rawAuthors as Pick<Profile, 'id' | 'full_name' | 'avatar_url'>[] | null)?.forEach((p) =>
+        designAuthorMap.set(p.id, p),
+      )
+    }
+    designComments = rawDesignCommentList.map((c) => ({
+      ...c,
+      author: designAuthorMap.get(c.user_id) ?? null,
+    }))
+  }
+
+  // Data spécifique moodboard
+  let moodboardBlocks: MoodboardBlock[] = []
+  let moodboardComments: BlockComment[] = []
+
+  if (isMoodboardSubPhase) {
+    // getMoodboardBlocks génère les signed URLs via admin client
+    moodboardBlocks = await getMoodboardBlocks(params.subPhaseId)
+
+    // Fetch comments (même pattern que script)
+    const { data: rawMbComments } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('sub_phase_id', params.subPhaseId)
+      .order('created_at', { ascending: true })
+
+    const rawMbCommentList = (rawMbComments ?? []) as {
+      id: string
+      block_id: string | null
+      sub_phase_id: string | null
+      phase_id: string | null
+      user_id: string
+      content: string
+      is_resolved: boolean
+      created_at: string
+      updated_at: string
+    }[]
+
+    const mbAuthorIds = [...new Set(rawMbCommentList.map((c) => c.user_id))]
+    const mbAuthorMap = new Map<string, Pick<Profile, 'id' | 'full_name' | 'avatar_url'>>()
+    if (mbAuthorIds.length > 0) {
+      const { data: rawAuthors } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', mbAuthorIds)
+      ;(rawAuthors as Pick<Profile, 'id' | 'full_name' | 'avatar_url'>[] | null)?.forEach((p) =>
+        mbAuthorMap.set(p.id, p),
+      )
+    }
+    moodboardComments = rawMbCommentList.map((c) => ({
+      ...c,
+      author: mbAuthorMap.get(c.user_id) ?? null,
+    }))
+  }
+
+  // Data spécifique audio
+  let audioTracks: AudioTrack[] = []
+  let audioComments: BlockComment[] = []
+
+  if (isAudioSubPhase) {
+    audioTracks = await getAudioTracks(params.subPhaseId)
+
+    const { data: rawAudioComments } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('sub_phase_id', params.subPhaseId)
+      .order('created_at', { ascending: true })
+
+    const rawAudioCommentList = (rawAudioComments ?? []) as {
+      id: string; block_id: string | null; sub_phase_id: string | null
+      phase_id: string | null; user_id: string; content: string
+      is_resolved: boolean; created_at: string; updated_at: string
+    }[]
+
+    const audioAuthorIds = [...new Set(rawAudioCommentList.map((c) => c.user_id))]
+    const audioAuthorMap = new Map<string, Pick<Profile, 'id' | 'full_name' | 'avatar_url'>>()
+    if (audioAuthorIds.length > 0) {
+      const { data: rawAuthors } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', audioAuthorIds)
+      ;(rawAuthors as Pick<Profile, 'id' | 'full_name' | 'avatar_url'>[] | null)?.forEach((p) =>
+        audioAuthorMap.set(p.id, p),
+      )
+    }
+    audioComments = rawAudioCommentList.map((c) => ({
+      ...c,
+      author: audioAuthorMap.get(c.user_id) ?? null,
+    }))
+  }
+
+  const audioKind: 'vo' | 'music' = subPhase.slug === 'musique' ? 'music' : 'vo'
+
   const meta = SUB_PHASE_META[subPhase.slug]
 
   return (
@@ -250,8 +420,8 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
           <StatusBadge status={subPhase.status} className="flex-shrink-0" />
         </div>
 
-        {/* Actions standard — masquées pour formulaire et script (gèrent eux-mêmes leur workflow) */}
-        {!isFormSubPhase && !isScriptSubPhase && (
+        {/* Actions standard — masquées pour formulaire, script, moodboard, storyboard, design et audio (gèrent leur propre workflow) */}
+        {!isFormSubPhase && !isScriptSubPhase && !isMoodboardSubPhase && !isStoryboardSubPhase && !isDesignSubPhase && !isAudioSubPhase && (
           <SubPhaseActions
             subPhaseId={subPhase.id}
             subPhaseStatus={subPhase.status}
@@ -287,8 +457,65 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
           />
         )}
 
+        {/* Éditeur de storyboard */}
+        {isStoryboardSubPhase && (
+          <StoryboardEditor
+            subPhaseId={subPhase.id}
+            subPhaseStatus={subPhase.status}
+            userRole={userRole}
+            canStart={canStart}
+            projectId={project.id}
+            phaseId={phase.id}
+            initialShots={storyboardShots}
+            initialComments={storyboardComments}
+          />
+        )}
+
+        {/* Éditeur de design */}
+        {isDesignSubPhase && (
+          <DesignEditor
+            subPhaseId={subPhase.id}
+            subPhaseStatus={subPhase.status}
+            userRole={userRole}
+            canStart={canStart}
+            projectId={project.id}
+            phaseId={phase.id}
+            initialFiles={designFiles}
+            initialComments={designComments}
+          />
+        )}
+
+        {/* Éditeur de moodboard */}
+        {isMoodboardSubPhase && (
+          <MoodboardEditor
+            subPhaseId={subPhase.id}
+            subPhaseStatus={subPhase.status}
+            userRole={userRole}
+            canStart={canStart}
+            projectId={project.id}
+            phaseId={phase.id}
+            initialBlocks={moodboardBlocks}
+            initialComments={moodboardComments}
+          />
+        )}
+
+        {/* Éditeur audio (VO / Musique) */}
+        {isAudioSubPhase && (
+          <AudioEditor
+            subPhaseId={subPhase.id}
+            subPhaseStatus={subPhase.status}
+            userRole={userRole}
+            canStart={canStart}
+            projectId={project.id}
+            phaseId={phase.id}
+            kind={audioKind}
+            initialTracks={audioTracks}
+            initialComments={audioComments}
+          />
+        )}
+
         {/* Placeholder pour les autres sous-phases */}
-        {!isFormSubPhase && !isScriptSubPhase && (
+        {!isFormSubPhase && !isScriptSubPhase && !isMoodboardSubPhase && !isStoryboardSubPhase && !isDesignSubPhase && !isAudioSubPhase && (
           <div className="bg-[#111111] border border-[#2a2a2a] rounded-2xl p-10 text-center space-y-4">
             <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center mx-auto">
               <Clock className="h-6 w-6 text-[#333333]" />

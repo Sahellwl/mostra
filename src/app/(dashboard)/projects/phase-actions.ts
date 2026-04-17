@@ -231,13 +231,13 @@ export async function unapprovePhase(phaseId: string): Promise<PhaseActionResult
 
   const phase = rawPhase as ProjectPhase | null
   if (!phase) return { success: false, error: 'Phase introuvable' }
-  if (phase.status !== 'completed' && phase.status !== 'approved') {
-    return { success: false, error: 'La phase doit être approuvée pour être désapprouvée' }
+  if (phase.status !== 'completed' && phase.status !== 'approved' && phase.status !== 'in_review') {
+    return { success: false, error: 'La phase doit être en review ou approuvée pour être désapprouvée' }
   }
 
   const { error } = await db(supabase)
     .from('project_phases')
-    .update({ status: 'in_review', completed_at: null })
+    .update({ status: 'in_progress', completed_at: null })
     .eq('id', phaseId)
 
   if (error) return { success: false, error: error.message }
@@ -250,7 +250,7 @@ export async function unapprovePhase(phaseId: string): Promise<PhaseActionResult
 
   const allPhases = (rawAllPhases as Pick<ProjectPhase, 'id' | 'status'>[] | null) ?? []
   const updatedPhases = allPhases.map((p) =>
-    p.id === phaseId ? { ...p, status: 'in_review' as const } : p,
+    p.id === phaseId ? { ...p, status: 'in_progress' as const } : p,
   )
   const doneCount = updatedPhases.filter(
     (p) => p.status === 'completed' || p.status === 'approved',

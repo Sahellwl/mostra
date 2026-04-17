@@ -3,56 +3,18 @@
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { db } from '@/lib/supabase/helpers'
-import type { Project, ProjectPhase, SubPhase, PhaseBlock, Profile } from '@/lib/types'
+import type { Project, ProjectPhase, SubPhase, StoryboardShotContent, Profile } from '@/lib/types'
 import type { BlockComment } from '@/lib/hooks/useRealtimeBlockComments'
 
-export type ScriptClientActionResult = { success: true } | { success: false; error: string }
+export type StoryboardClientResult = { success: true } | { success: false; error: string }
 
-// ── fetchSubPhaseComments ─────────────────────────────────────────
-// Récupère tous les commentaires d'une sous-phase (pour le polling client).
+// ── Storage path helper ───────────────────────────────────────────
 
-export async function fetchSubPhaseComments(
-  token: string,
-  subPhaseId: string,
-): Promise<BlockComment[]> {
-  noStore()
-  const admin = createAdminClient()
-  const project = await verifyToken(token)
-  if (!project) return []
-
-  const { data: rawComments } = await admin
-    .from('comments')
-    .select('*')
-    .eq('sub_phase_id', subPhaseId)
-    .order('created_at', { ascending: true })
-
-  const list = (rawComments ?? []) as {
-    id: string
-    block_id: string | null
-    sub_phase_id: string | null
-    phase_id: string | null
-    user_id: string
-    content: string
-    is_resolved: boolean
-    created_at: string
-    updated_at: string
-  }[]
-
-  if (list.length === 0) return []
-
-  // Fetch author profiles
-  const authorIds = [...new Set(list.map((c) => c.user_id))]
-  const { data: rawAuthors } = await admin
-    .from('profiles')
-    .select('id, full_name, avatar_url')
-    .in('id', authorIds)
-
-  const authorMap = new Map<string, Pick<Profile, 'id' | 'full_name' | 'avatar_url'>>()
-  ;(rawAuthors as Pick<Profile, 'id' | 'full_name' | 'avatar_url'>[] | null)?.forEach((p) =>
-    authorMap.set(p.id, p),
-  )
-
-  return list.map((c) => ({ ...c, author: authorMap.get(c.user_id) ?? null }))
+function extractStoragePath(imageUrl: string): string | null {
+  if (!imageUrl) return null
+  const match = imageUrl.match(/\/project-files\/(.+?)(?:\?|$)/)
+  if (match) return match[1]
+  return imageUrl
 }
 
 // ── Token helper ──────────────────────────────────────────────────
@@ -65,6 +27,33 @@ async function verifyToken(token: string) {
     .eq('share_token', token)
     .maybeSingle()
   return rawProject as Pick<Project, 'id' | 'client_id' | 'agency_id' | 'share_token'> | null
+}
+
+async function verifySubPhaseOwnership(
+  admin: ReturnType<typeof createAdminClient>,
+  subPhaseId: string,
+  projectId: string,
+): Promise<{
+  subPhase: Pick<SubPhase, 'id' | 'phase_id' | 'status'>
+  phase: Pick<ProjectPhase, 'id' | 'project_id'>
+} | null> {
+  const { data: rawSp } = await admin
+    .from('sub_phases')
+    .select('id, phase_id, status')
+    .eq('id', subPhaseId)
+    .maybeSingle()
+  const subPhase = rawSp as Pick<SubPhase, 'id' | 'phase_id' | 'status'> | null
+  if (!subPhase) return null
+
+  const { data: rawPhase } = await admin
+    .from('project_phases')
+    .select('id, project_id')
+    .eq('id', subPhase.phase_id)
+    .maybeSingle()
+  const phase = rawPhase as Pick<ProjectPhase, 'id' | 'project_id'> | null
+  if (!phase || phase.project_id !== projectId) return null
+
+  return { subPhase, phase }
 }
 
 async function resolveClientUserId(
@@ -85,37 +74,81 @@ async function resolveClientUserId(
   return (rawMember as { user_id: string } | null)?.user_id ?? null
 }
 
-async function verifySubPhaseOwnership(
-  admin: ReturnType<typeof createAdminClient>,
+// ── fetchStoryboardData ───────────────────────────────────────────
+
+export async function fetchStoryboardData(
+  token: string,
   subPhaseId: string,
-  projectId: string,
-): Promise<{ subPhase: Pick<SubPhase, 'id' | 'phase_id' | 'status'>; phase: Pick<ProjectPhase, 'id' | 'project_id'> } | null> {
-  const { data: rawSubPhase } = await admin
-    .from('sub_phases')
-    .select('id, phase_id, status')
-    .eq('id', subPhaseId)
-    .maybeSingle()
-  const subPhase = rawSubPhase as Pick<SubPhase, 'id' | 'phase_id' | 'status'> | null
-  if (!subPhase) return null
+): Promise<{
+  shots: { id: string; content: StoryboardShotContent; sort_order: number }[]
+  comments: BlockComment[]
+}> {
+  noStore()
+  const admin = createAdminClient()
+  const project = await verifyToken(token)
+  if (!project) return { shots: [], comments: [] }
 
-  const { data: rawPhase } = await admin
-    .from('project_phases')
-    .select('id, project_id')
-    .eq('id', subPhase.phase_id)
-    .maybeSingle()
-  const phase = rawPhase as Pick<ProjectPhase, 'id' | 'project_id'> | null
-  if (!phase || phase.project_id !== projectId) return null
+  const [{ data: rawShots }, { data: rawComments }] = await Promise.all([
+    admin
+      .from('phase_blocks')
+      .select('id, content, sort_order')
+      .eq('sub_phase_id', subPhaseId)
+      .eq('type', 'storyboard_shot')
+      .order('sort_order', { ascending: true }),
+    admin
+      .from('comments')
+      .select('*')
+      .eq('sub_phase_id', subPhaseId)
+      .order('created_at', { ascending: true }),
+  ])
 
-  return { subPhase, phase }
+  const commentList = (rawComments ?? []) as {
+    id: string
+    block_id: string | null
+    sub_phase_id: string | null
+    phase_id: string | null
+    user_id: string
+    content: string
+    is_resolved: boolean
+    created_at: string
+    updated_at: string
+  }[]
+
+  const authorIds = [...new Set(commentList.map((c) => c.user_id))]
+  const authorMap = new Map<string, Pick<Profile, 'id' | 'full_name' | 'avatar_url'>>()
+  if (authorIds.length > 0) {
+    const { data: rawAuthors } = await admin
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', authorIds)
+    ;(rawAuthors as Pick<Profile, 'id' | 'full_name' | 'avatar_url'>[] | null)?.forEach((p) =>
+      authorMap.set(p.id, p),
+    )
+  }
+
+  const rawShotList = (rawShots ?? []) as { id: string; content: StoryboardShotContent; sort_order: number }[]
+  const shotsWithUrls = await Promise.all(
+    rawShotList.map(async (s) => {
+      const storagePath = extractStoragePath(s.content.image_url)
+      if (!storagePath) return s
+      const { data } = await admin.storage.from('project-files').createSignedUrl(storagePath, 3600)
+      return { ...s, content: { ...s.content, image_url: data?.signedUrl ?? '' } }
+    }),
+  )
+
+  return {
+    shots: shotsWithUrls,
+    comments: commentList.map((c) => ({ ...c, author: authorMap.get(c.user_id) ?? null })),
+  }
 }
 
-// ── addBlockComment ───────────────────────────────────────────────
+// ── addStoryboardComment ──────────────────────────────────────────
 
-export async function addBlockComment(
+export async function addStoryboardComment(
   token: string,
   blockId: string,
   content: string,
-): Promise<ScriptClientActionResult> {
+): Promise<StoryboardClientResult> {
   const admin = createAdminClient()
   const project = await verifyToken(token)
   if (!project) return { success: false, error: 'Token invalide' }
@@ -124,14 +157,13 @@ export async function addBlockComment(
   const userId = await resolveClientUserId(admin, project)
   if (!userId) return { success: false, error: 'Client introuvable' }
 
-  // Verify block → sub_phase → phase → project chain
   const { data: rawBlock } = await admin
     .from('phase_blocks')
     .select('id, sub_phase_id')
     .eq('id', blockId)
     .maybeSingle()
-  const block = rawBlock as Pick<PhaseBlock, 'id' | 'sub_phase_id'> | null
-  if (!block || !block.sub_phase_id) return { success: false, error: 'Bloc introuvable' }
+  const block = rawBlock as { id: string; sub_phase_id: string | null } | null
+  if (!block || !block.sub_phase_id) return { success: false, error: 'Shot introuvable' }
 
   const ownership = await verifySubPhaseOwnership(admin, block.sub_phase_id, project.id)
   if (!ownership) return { success: false, error: 'Accès refusé' }
@@ -150,12 +182,12 @@ export async function addBlockComment(
   return { success: true }
 }
 
-// ── resolveBlockComment ───────────────────────────────────────────
+// ── resolveStoryboardComment ──────────────────────────────────────
 
-export async function resolveBlockComment(
+export async function resolveStoryboardComment(
   token: string,
   commentId: string,
-): Promise<ScriptClientActionResult> {
+): Promise<StoryboardClientResult> {
   const admin = createAdminClient()
   const project = await verifyToken(token)
   if (!project) return { success: false, error: 'Token invalide' }
@@ -171,13 +203,13 @@ export async function resolveBlockComment(
     user_id: string
     is_resolved: boolean
   } | null
-  if (!comment || comment.project_id !== project.id) return { success: false, error: 'Commentaire introuvable' }
 
-  // Client can only resolve their own comments
+  if (!comment || comment.project_id !== project.id)
+    return { success: false, error: 'Commentaire introuvable' }
+
   const clientUserId = await resolveClientUserId(admin, project)
-  if (clientUserId && comment.user_id !== clientUserId) {
+  if (clientUserId && comment.user_id !== clientUserId)
     return { success: false, error: 'Vous ne pouvez résoudre que vos propres commentaires' }
-  }
 
   const { error } = await db(admin)
     .from('comments')
@@ -188,12 +220,12 @@ export async function resolveBlockComment(
   return { success: true }
 }
 
-// ── approveScriptSubPhase ─────────────────────────────────────────
+// ── approveStoryboardSubPhase ─────────────────────────────────────
 
-export async function approveScriptSubPhase(
+export async function approveStoryboardSubPhase(
   token: string,
   subPhaseId: string,
-): Promise<ScriptClientActionResult> {
+): Promise<StoryboardClientResult> {
   const admin = createAdminClient()
   const project = await verifyToken(token)
   if (!project) return { success: false, error: 'Token invalide' }
@@ -202,9 +234,8 @@ export async function approveScriptSubPhase(
   if (!ownership) return { success: false, error: 'Sous-phase introuvable' }
   const { subPhase, phase } = ownership
 
-  if (subPhase.status !== 'in_review') {
-    return { success: false, error: 'Le script doit être en review pour être approuvé' }
-  }
+  if (subPhase.status !== 'in_review')
+    return { success: false, error: 'La sous-phase doit être en review pour être approuvée' }
 
   const { error } = await db(admin)
     .from('sub_phases')
@@ -213,7 +244,7 @@ export async function approveScriptSubPhase(
 
   if (error) return { success: false, error: error.message }
 
-  // Auto-complete parent phase if all sub_phases are done
+  // Auto-complete parent phase if all sub_phases done
   const { data: rawAllSps } = await admin
     .from('sub_phases')
     .select('id, status')
@@ -232,13 +263,13 @@ export async function approveScriptSubPhase(
       .eq('id', phase.id)
   }
 
-  const clientUserId = await resolveClientUserId(admin, project)
-  if (clientUserId) {
+  const userId = await resolveClientUserId(admin, project)
+  if (userId) {
     await db(admin).from('activity_logs').insert({
       project_id: project.id,
-      user_id: clientUserId,
+      user_id: userId,
       action: 'phase_approved',
-      details: { phase_name: 'Script (client)' },
+      details: { phase_name: 'Storyboard (client)' },
     })
   }
 
@@ -247,13 +278,13 @@ export async function approveScriptSubPhase(
   return { success: true }
 }
 
-// ── requestScriptRevisions ────────────────────────────────────────
+// ── requestStoryboardRevisions ────────────────────────────────────
 
-export async function requestScriptRevisions(
+export async function requestStoryboardRevisions(
   token: string,
   subPhaseId: string,
   message: string,
-): Promise<ScriptClientActionResult> {
+): Promise<StoryboardClientResult> {
   const admin = createAdminClient()
   const project = await verifyToken(token)
   if (!project) return { success: false, error: 'Token invalide' }
@@ -265,16 +296,15 @@ export async function requestScriptRevisions(
   if (!ownership) return { success: false, error: 'Sous-phase introuvable' }
   const { subPhase, phase } = ownership
 
-  if (subPhase.status !== 'in_review') {
-    return { success: false, error: 'Le script doit être en review pour demander des modifications' }
-  }
+  if (subPhase.status !== 'in_review')
+    return { success: false, error: 'La sous-phase doit être en review pour demander des modifications' }
 
-  const { error: spErr } = await db(admin)
+  const { error } = await db(admin)
     .from('sub_phases')
     .update({ status: 'in_progress' })
     .eq('id', subPhaseId)
 
-  if (spErr) return { success: false, error: spErr.message }
+  if (error) return { success: false, error: error.message }
 
   if (message.trim()) {
     await db(admin).from('comments').insert({
@@ -292,7 +322,7 @@ export async function requestScriptRevisions(
     project_id: project.id,
     user_id: userId,
     action: 'status_changed',
-    details: { phase_name: 'Script', message: 'Demande de modifications client' },
+    details: { phase_name: 'Storyboard', message: 'Demande de modifications client' },
   })
 
   revalidatePath(`/client/${token}`)

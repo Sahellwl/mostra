@@ -256,14 +256,14 @@ export async function unapproveSubPhase(subPhaseId: string): Promise<SubPhaseAct
   if (!resolved) return { success: false, error: 'Sous-phase introuvable' }
   const { sp, phase } = resolved
 
-  if (sp.status !== 'completed' && sp.status !== 'approved') {
-    return { success: false, error: 'La sous-phase doit être approuvée pour être désapprouvée' }
+  if (sp.status !== 'completed' && sp.status !== 'approved' && sp.status !== 'in_review') {
+    return { success: false, error: 'La sous-phase doit être en review ou approuvée pour être désapprouvée' }
   }
 
-  // Repasse en in_review
+  // Repasse en in_progress
   const { error } = await db(supabase)
     .from('sub_phases')
-    .update({ status: 'in_review', completed_at: null })
+    .update({ status: 'in_progress', completed_at: null })
     .eq('id', subPhaseId)
 
   if (error) return { success: false, error: error.message }

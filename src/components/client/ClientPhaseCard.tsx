@@ -181,10 +181,19 @@ export default function ClientPhaseCard({
             const dotColor = spDone ? '#22C55E' : spInReview ? '#F59E0B' : '#3B82F6'
             const spHref = `/client/${token}/phases/${phase.id}/sub/${sp.id}`
 
+            const isMoodboardSp = sp.slug === 'style' || sp.slug === 'moodboard'
+            const isStoryboardSp = sp.slug === 'storyboard'
+            const isDesignSp = sp.slug === 'design'
+            const isAudioSp = sp.slug === 'vo' || sp.slug === 'musique' || sp.slug === 'voix-off'
+
             // Sub-phases that have a dedicated client page + current accessible state
             const hasClientPage =
               (isFormSp && (spInProgress || spInReview || spDone)) ||
-              (isScriptSp && (spInReview || spDone))
+              (isScriptSp && (spInReview || spDone)) ||
+              (isMoodboardSp && (spInReview || spDone)) ||
+              (isStoryboardSp && (spInReview || spDone)) ||
+              (isDesignSp && (spInReview || spDone)) ||
+              (isAudioSp && (spInReview || spDone))
 
             return (
               <div

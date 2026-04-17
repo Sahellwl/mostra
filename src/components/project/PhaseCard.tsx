@@ -311,7 +311,7 @@ function SubPhaseList({
         const canStartSp = canAct && canStart && prevDone && sp.status === 'pending'
         const canReview = canAct && sp.status === 'in_progress'
         const canApproveSp = isAdmin && sp.status === 'in_review'
-        const canUnapproveSp = isAdmin && (sp.status === 'completed' || sp.status === 'approved')
+        const canUnapproveSp = isAdmin && (sp.status === 'completed' || sp.status === 'approved' || sp.status === 'in_review')
         const canView = sp.status !== 'pending'
 
         return (
@@ -561,14 +561,31 @@ function PhaseActions({
           Voir
         </Link>
         {isAdmin ? (
-          <button type="button" className={btnGreen} disabled={busy} onClick={onComplete}>
-            {loading === 'complete' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <>
+            <button type="button" className={btnGreen} disabled={busy} onClick={onComplete}>
+              {loading === 'complete' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle className="h-3.5 w-3.5" />
+              )}
+              Approuver
+            </button>
+            {confirmUnapprove ? (
+              <button type="button" className={btnRed} disabled={busy} onClick={onUnapproveConfirm}>
+                {loading === 'unapprove' ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5" />
+                )}
+                Confirmer la désapprobation ?
+              </button>
             ) : (
-              <CheckCircle className="h-3.5 w-3.5" />
+              <button type="button" className={btnGhost} disabled={busy} onClick={onUnapproveRequest}>
+                <RotateCcw className="h-3.5 w-3.5" />
+                Désapprouver
+              </button>
             )}
-            Approuver
-          </button>
+          </>
         ) : (
           <span className="text-xs text-[#F59E0B]">En attente d&apos;approbation client</span>
         )}

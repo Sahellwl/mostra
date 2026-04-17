@@ -179,6 +179,10 @@ export interface Comment {
   content: string
   is_resolved: boolean
   parent_id: string | null
+  /** Secondes dans la vidéo (Video Review — Sprint 14) */
+  timecode_seconds: number | null
+  /** Version de la vidéo liée au commentaire */
+  video_version: number | null
   created_at: string
   updated_at: string
 }
@@ -257,11 +261,14 @@ export interface AudioTrackContent {
   description?: string
   kind: 'vo' | 'music'
   is_selected: boolean
+  duration_seconds?: number
 }
 
 export interface DesignFileContent {
   file_url: string
   file_name: string
+  file_size: number
+  mime_type: string
   description?: string
 }
 
@@ -350,6 +357,8 @@ export type CommentInsert = Omit<Comment, 'id' | 'created_at' | 'updated_at'> & 
   parent_id?: string | null
   sub_phase_id?: string | null
   block_id?: string | null
+  timecode_seconds?: number | null
+  video_version?: number | null
 }
 
 export type ActivityLogInsert = Omit<ActivityLog, 'id' | 'created_at'> & {
