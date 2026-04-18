@@ -19,10 +19,9 @@ export default async function DashboardPage() {
 
   const memberData = await getCurrentMember(supabase, user.id)
 
-  // Si pas de membre actif → sign out pour éviter la boucle middleware ↔ dashboard
+  // Si pas de membre actif → onboarding (saisie d'un code d'invitation)
   if (!memberData?.member) {
-    await supabase.auth.signOut()
-    redirect('/login')
+    redirect('/onboarding')
   }
 
   const { member, agency } = memberData

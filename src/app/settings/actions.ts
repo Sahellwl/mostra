@@ -9,8 +9,16 @@ import type { AgencyMember } from '@/lib/types'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 export type InviteResult =
-  | { success: true; token: string; email: string; role: string }
+  | { success: true; token: string; email: string; role: string; invite_code: string }
   | { success: false; error: string }
+
+// Alphabet sans caractères ambigus : pas de 0/O, 1/I/L
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+function generateInviteCode(): string {
+  const pick = () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]
+  return `${pick()}${pick()}${pick()}${pick()}-${pick()}${pick()}${pick()}${pick()}`
+}
 
 // ── Permission helper ────────────────────────────────────────────
 
@@ -42,64 +50,60 @@ async function requireAdmin(): Promise<
 // ── sendInvitation ───────────────────────────────────────────────
 
 export async function sendInvitation(input: {
-  email: string
-  role: 'agency_admin' | 'creative'
+  email?: string
+  role: 'agency_admin' | 'creative' | 'client'
 }): Promise<InviteResult> {
   const auth = await requireAdmin()
   if ('error' in auth) return { success: false, error: auth.error }
   const { supabase, member } = auth
 
-  const email = input.email.toLowerCase().trim()
+  const email = input.email?.toLowerCase().trim() || null
   const agencyId = member.agency_id
 
-  // Vérifier si l'email est déjà membre actif
-  const { data: existingMember } = await db(supabase)
-    .from('agency_members')
-    .select('id, profiles!user_id(email)')
-    .eq('agency_id', agencyId)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  // Plus fiable : chercher via profiles directement
-  const { data: profiles } = await db(supabase)
-    .from('profiles')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle()
-
-  if (profiles) {
-    const { data: alreadyMember } = await db(supabase)
-      .from('agency_members')
-      .select('id, role')
-      .eq('agency_id', agencyId)
-      .eq('user_id', profiles.id)
-      .eq('is_active', true)
+  // Vérifications liées à l'email (uniquement si un email est fourni)
+  if (email) {
+    // Vérifier si l'email est déjà membre actif
+    const { data: profiles } = await db(supabase)
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
       .maybeSingle()
 
-    if (alreadyMember) {
-      return { success: false, error: "Cette personne est déjà membre de l'agence." }
+    if (profiles) {
+      const { data: alreadyMember } = await db(supabase)
+        .from('agency_members')
+        .select('id, role')
+        .eq('agency_id', agencyId)
+        .eq('user_id', profiles.id)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (alreadyMember) {
+        return { success: false, error: "Cette personne est déjà membre de l'agence." }
+      }
+    }
+
+    // Vérifier si une invitation non expirée existe déjà pour cet email
+    const { data: existingInvite } = await db(supabase)
+      .from('invitations')
+      .select('id, expires_at')
+      .eq('agency_id', agencyId)
+      .eq('email', email)
+      .is('accepted_at', null)
+      .maybeSingle()
+
+    if (existingInvite) {
+      const expired = new Date(existingInvite.expires_at) < new Date()
+      if (!expired) {
+        return { success: false, error: 'Une invitation est déjà en attente pour cet email.' }
+      }
+      await db(supabase).from('invitations').delete().eq('id', existingInvite.id)
     }
   }
 
-  // Vérifier si une invitation non expirée existe déjà
-  const { data: existingInvite } = await db(supabase)
-    .from('invitations')
-    .select('id, expires_at')
-    .eq('agency_id', agencyId)
-    .eq('email', email)
-    .is('accepted_at', null)
-    .maybeSingle()
+  // Créer l'invitation — token auto-généré par la DB, code court généré ici
+  const inviteCode = generateInviteCode()
 
-  if (existingInvite) {
-    const expired = new Date(existingInvite.expires_at) < new Date()
-    if (!expired) {
-      return { success: false, error: 'Une invitation est déjà en attente pour cet email.' }
-    }
-    // Supprimer l'invitation expirée
-    await db(supabase).from('invitations').delete().eq('id', existingInvite.id)
-  }
-
-  // Créer l'invitation — token auto-généré par la DB
   const { data: invitation, error: insertErr } = await db(supabase)
     .from('invitations')
     .insert({
@@ -107,8 +111,9 @@ export async function sendInvitation(input: {
       email,
       role: input.role,
       invited_by: member.user_id,
+      invite_code: inviteCode,
     })
-    .select('token')
+    .select('token, invite_code')
     .single()
 
   if (insertErr || !invitation) {
@@ -120,7 +125,13 @@ export async function sendInvitation(input: {
   }
 
   revalidatePath('/settings/team')
-  return { success: true, token: invitation.token, email, role: input.role }
+  return {
+    success: true,
+    token: invitation.token,
+    email: email ?? '',
+    role: input.role,
+    invite_code: invitation.invite_code ?? inviteCode,
+  }
 }
 
 // ── revokeInvitation ─────────────────────────────────────────────

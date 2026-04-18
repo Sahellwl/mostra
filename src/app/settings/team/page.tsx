@@ -61,7 +61,7 @@ export default async function TeamSettingsPage() {
   // ── Invitations en attente ────────────────────────────────────
   const { data: rawInvitations } = await db(supabase)
     .from('invitations')
-    .select('id, email, role, token, created_at, expires_at')
+    .select('id, email, role, token, invite_code, created_at, expires_at')
     .eq('agency_id', member.agency_id)
     .is('accepted_at', null)
     .gt('expires_at', new Date().toISOString())
@@ -72,6 +72,7 @@ export default async function TeamSettingsPage() {
     email: string
     role: string
     token: string
+    invite_code: string | null
     created_at: string
     expires_at: string
   }[]
@@ -126,10 +127,11 @@ export default async function TeamSettingsPage() {
             ) : (
               <div className="divide-y divide-[#1a1a1a]">
                 {/* Header */}
-                <div className="grid grid-cols-[1fr_80px_100px_180px_80px] gap-4 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium">
+                <div className="grid grid-cols-[1fr_80px_100px_110px_160px_80px] gap-3 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium">
                   <span>Email</span>
                   <span>Rôle</span>
                   <span>Envoyée le</span>
+                  <span>Code</span>
                   <span>Lien</span>
                   <span className="text-right">Actions</span>
                 </div>
@@ -139,7 +141,7 @@ export default async function TeamSettingsPage() {
                   return (
                     <div
                       key={inv.id}
-                      className="grid grid-cols-[1fr_80px_100px_180px_80px] gap-4 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors"
+                      className="grid grid-cols-[1fr_80px_100px_110px_160px_80px] gap-3 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors"
                     >
                       {/* Email */}
                       <div className="flex items-center gap-2 min-w-0">
@@ -154,6 +156,13 @@ export default async function TeamSettingsPage() {
 
                       {/* Date */}
                       <p className="text-xs text-[#555555]">{formatDate(inv.created_at)}</p>
+
+                      {/* Code court */}
+                      {inv.invite_code ? (
+                        <CopyLinkButton url={inv.invite_code} label={inv.invite_code} mono />
+                      ) : (
+                        <span className="text-xs text-[#333333]">—</span>
+                      )}
 
                       {/* Copy link */}
                       <CopyLinkButton url={url} />

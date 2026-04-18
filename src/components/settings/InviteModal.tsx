@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, UserPlus, Loader2, Copy, Check, ExternalLink } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,8 +9,13 @@ import { toast } from 'sonner'
 import { sendInvitation } from '@/app/settings/actions'
 
 const schema = z.object({
-  email: z.string().min(1, 'Email requis').email('Email invalide'),
-  role: z.enum(['agency_admin', 'creative'] as const),
+  email: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+      message: 'Adresse email invalide',
+    }),
+  role: z.enum(['agency_admin', 'creative', 'client'] as const),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -26,12 +31,14 @@ interface InviteSuccessData {
   token: string
   email: string
   role: string
+  invite_code: string
 }
 
 export default function InviteModal() {
   const [open, setOpen] = useState(false)
   const [success, setSuccess] = useState<InviteSuccessData | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -60,19 +67,20 @@ export default function InviteModal() {
       setSuccess(null)
       setServerError(null)
       setLinkCopied(false)
+      setCodeCopied(false)
       reset()
     }, 200)
   }
 
   async function onSubmit(values: FormValues) {
     setServerError(null)
-    const result = await sendInvitation(values)
+    const result = await sendInvitation({ email: values.email || undefined, role: values.role })
     if (!result.success) {
       setServerError(result.error)
       return
     }
-    setSuccess({ token: result.token, email: result.email, role: result.role })
-    toast.success(`Invitation créée pour ${result.email}`)
+    setSuccess({ token: result.token, email: result.email, role: result.role, invite_code: result.invite_code })
+    toast.success(result.email ? `Invitation créée pour ${result.email}` : 'Code d\'invitation généré')
   }
 
   const inviteUrl = success
@@ -85,9 +93,17 @@ export default function InviteModal() {
     setTimeout(() => setLinkCopied(false), 2000)
   }
 
+  async function copyCode() {
+    if (!success?.invite_code) return
+    await navigator.clipboard.writeText(success.invite_code)
+    setCodeCopied(true)
+    setTimeout(() => setCodeCopied(false), 2000)
+  }
+
   const ROLE_LABELS: Record<string, string> = {
     agency_admin: 'Admin',
     creative: 'Créatif',
+    client: 'Client',
   }
 
   return (
@@ -129,53 +145,76 @@ export default function InviteModal() {
             {/* Body */}
             <div className="px-5 py-5">
               {success ? (
-                /* ── Succès : afficher le lien ── */
+                /* ── Succès ── */
                 <div className="space-y-4">
                   <p className="text-sm text-[#a0a0a0]">
-                    L&apos;invitation pour{' '}
-                    <span className="text-white font-medium">{success.email}</span> a été créée en
-                    tant que{' '}
-                    <span className="text-white font-medium">{ROLE_LABELS[success.role]}</span>.
-                    Copiez le lien ci-dessous et envoyez-le manuellement.
+                    {success.email ? (
+                      <>
+                        Invitation créée pour{' '}
+                        <span className="text-white font-medium">{success.email}</span>{' '}
+                        en tant que{' '}
+                        <span className="text-white font-medium">{ROLE_LABELS[success.role] ?? success.role}</span>.
+                      </>
+                    ) : (
+                      <>
+                        Code généré pour un{' '}
+                        <span className="text-white font-medium">{ROLE_LABELS[success.role] ?? success.role}</span>.
+                        Envoyez-le à la personne concernée.
+                      </>
+                    )}
                   </p>
 
-                  <div className="rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] p-3">
-                    <p className="text-[11px] text-[#555555] mb-1.5">
-                      Lien d&apos;invitation (valable 7 jours)
+                  {/* Code court — toujours affiché en premier */}
+                  <div className="rounded-lg bg-[#0a0a0a] border border-[#00D76B]/20 p-4">
+                    <p className="text-[11px] text-[#555555] mb-2.5">
+                      Code d&apos;invitation — à envoyer par WhatsApp, SMS ou email
                     </p>
-                    <p className="text-xs text-[#a0a0a0] break-all font-mono leading-relaxed">
-                      {inviteUrl}
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <span className="text-2xl font-mono font-bold text-white tracking-[0.2em]">
+                        {success.invite_code}
+                      </span>
+                      <button
+                        onClick={copyCode}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px]
+                          bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors flex-shrink-0 font-medium"
+                      >
+                        {codeCopied ? (
+                          <><Check className="h-3 w-3" />Copié !</>
+                        ) : (
+                          <><Copy className="h-3 w-3" />Copier</>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[#444444]">
+                      La personne le saisit sur <span className="text-[#555555]">/onboarding</span> après s&apos;être inscrite
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={copyLink}
-                      className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm
-                        bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors font-medium"
-                    >
-                      {linkCopied ? (
-                        <>
-                          <Check className="h-4 w-4" /> Copié !
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4" /> Copier le lien
-                        </>
-                      )}
-                    </button>
-                    <a
-                      href={inviteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center w-[38px] h-[38px] rounded-lg
-                        border border-[#2a2a2a] text-[#555555] hover:text-white hover:border-[#444444]
-                        transition-colors"
-                      title="Ouvrir le lien"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
+                  {/* Lien long — uniquement si email fourni */}
+                  {success.email && (
+                    <>
+                      <div className="rounded-lg bg-[#0a0a0a] border border-[#2a2a2a] p-3">
+                        <p className="text-[11px] text-[#555555] mb-1.5">
+                          Ou lien direct (valable 7 jours)
+                        </p>
+                        <p className="text-xs text-[#a0a0a0] break-all font-mono leading-relaxed">
+                          {inviteUrl}
+                        </p>
+                      </div>
+                      <button
+                        onClick={copyLink}
+                        className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm
+                          border border-[#2a2a2a] text-[#666666] hover:text-white hover:border-[#444444]
+                          transition-colors"
+                      >
+                        {linkCopied ? (
+                          <><Check className="h-3.5 w-3.5 text-[#22C55E]" /><span className="text-[#22C55E]">Lien copié !</span></>
+                        ) : (
+                          <><Copy className="h-3.5 w-3.5" />Copier le lien</>
+                        )}
+                      </button>
+                    </>
+                  )}
 
                   <button
                     onClick={handleClose}
@@ -189,7 +228,8 @@ export default function InviteModal() {
                 <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-[#a0a0a0] mb-1.5">
-                      Email <span className="text-[#EF4444]">*</span>
+                      Email{' '}
+                      <span className="text-[#444444] font-normal">(optionnel)</span>
                     </label>
                     <input
                       type="email"
@@ -201,24 +241,32 @@ export default function InviteModal() {
                     {errors.email && (
                       <p className="mt-1.5 text-xs text-[#EF4444]">{errors.email.message}</p>
                     )}
+                    <p className="mt-1.5 text-[11px] text-[#444444]">
+                      Sans email, seul le code d&apos;invitation est généré.
+                    </p>
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-[#a0a0a0] mb-1.5">
                       Rôle <span className="text-[#EF4444]">*</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {(
                         [
                           {
+                            value: 'client',
+                            label: 'Client',
+                            desc: 'Portail client',
+                          },
+                          {
                             value: 'creative',
                             label: 'Créatif',
-                            desc: 'Upload, phases, commentaires',
+                            desc: 'Upload & phases',
                           },
                           {
                             value: 'agency_admin',
                             label: 'Admin',
-                            desc: "Accès complet à l'agence",
+                            desc: 'Accès complet',
                           },
                         ] as const
                       ).map(({ value, label, desc }) => (
@@ -265,7 +313,7 @@ export default function InviteModal() {
                         flex items-center justify-center gap-2"
                     >
                       {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Envoyer l&apos;invitation
+                      Générer le code
                     </button>
                   </div>
                 </form>

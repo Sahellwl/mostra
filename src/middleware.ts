@@ -4,6 +4,9 @@ import { updateSession } from '@/lib/supabase/middleware'
 // Routes accessibles sans authentification
 const PUBLIC_ROUTES = ['/login', '/register']
 
+// Routes accessibles aux users auth sans membership
+const MEMBERLESS_ROUTES = ['/onboarding']
+
 const PUBLIC_PREFIXES = ['/invite/', '/client/']
 
 function isPublicRoute(pathname: string): boolean {
@@ -28,7 +31,8 @@ export async function middleware(request: NextRequest) {
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
   // Utilisateur non authentifié sur une route protégée → /login
-  if (!user && !isPublicRoute(pathname)) {
+  // (les routes MEMBERLESS sont auth-required mais pas membership-required)
+  if (!user && !isPublicRoute(pathname) && !MEMBERLESS_ROUTES.includes(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirectTo', pathname)
@@ -48,9 +52,13 @@ export async function middleware(request: NextRequest) {
 
     const role = (memberData as { role: string } | null)?.role ?? null
 
-    // Si l'utilisateur est auth mais sans membership actif → ne pas rediriger
-    // (évite la boucle infinie avec dashboard/page.tsx qui redirige vers /login)
-    if (!role) return supabaseResponse
+    // Pas de membership → envoyer vers /onboarding
+    if (!role) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
 
     const url = request.nextUrl.clone()
     url.pathname = getDashboardByRole(role)
