@@ -154,103 +154,242 @@ export async function getVideoData(phaseId: string): Promise<{
   return { currentVideo, allVersions, comments }
 }
 
-// ── uploadVideo ───────────────────────────────────────────────────
+// ── createVideoUploadUrl ──────────────────────────────────────────
+// Étape 1 du flow client-direct : génère une signed upload URL pour
+// que le navigateur puisse uploader directement vers Supabase Storage
+// sans passer par Vercel (limite 4.5 MB sur les Server Actions).
+
+export async function createVideoUploadUrl(input: {
+  phaseId: string
+  projectId: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+}): Promise<
+  | { success: true; uploadUrl: string; storagePath: string; version: number }
+  | { success: false; error: string }
+> {
+  try {
+    const ctx = await getCreativeContext()
+    if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+
+    const { phaseId, projectId, fileName, fileSize, mimeType } = input
+
+    if (!phaseId || !projectId) return { success: false, error: 'Données manquantes' }
+    if (!fileName) return { success: false, error: 'Nom de fichier manquant' }
+
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
+    const canonicalMime = VIDEO_MIME[ext] ?? mimeType
+    if (!canonicalMime || !VALID_VIDEO_MIMES.has(canonicalMime)) {
+      return { success: false, error: `Format non supporté : .${ext} — MP4, MOV, WebM uniquement` }
+    }
+    if (fileSize > 500 * 1024 * 1024) {
+      return { success: false, error: `Fichier trop lourd (max 500 MB)` }
+    }
+
+    const admin = createAdminClient()
+
+    // Calculer le numéro de version suivant
+    const { data: maxRow } = await admin
+      .from('phase_files')
+      .select('version')
+      .eq('phase_id', phaseId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const nextVersion = ((maxRow as { version: number } | null)?.version ?? 0) + 1
+    const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const storagePath = `${projectId}/animation/v${nextVersion}/${safeFileName}`
+
+    // Créer l'URL d'upload signée — le fichier ira directement du navigateur à Supabase
+    const { data: signedData, error: signErr } = await admin.storage
+      .from('project-files')
+      .createSignedUploadUrl(storagePath)
+
+    if (signErr || !signedData?.signedUrl) {
+      return { success: false, error: `Impossible de créer l'URL d'upload : ${signErr?.message ?? 'erreur inconnue'}` }
+    }
+
+    return {
+      success: true,
+      uploadUrl: signedData.signedUrl,
+      storagePath,
+      version: nextVersion,
+    }
+  } catch (err) {
+    console.error('[createVideoUploadUrl]', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inattendue' }
+  }
+}
+
+// ── recordVideoUpload ─────────────────────────────────────────────
+// Étape 3 du flow client-direct : après l'upload navigateur→Supabase,
+// enregistre les métadonnées en base et retourne le VideoFile avec URL signée.
+
+export async function recordVideoUpload(input: {
+  phaseId: string
+  projectId: string
+  storagePath: string
+  fileName: string
+  fileType: string
+  fileSize: number
+  version: number
+}): Promise<{ success: true; file: VideoFile } | { success: false; error: string }> {
+  try {
+    const ctx = await getCreativeContext()
+    if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+    const { user } = ctx
+
+    const { phaseId, projectId, storagePath, fileName, fileType, fileSize, version } = input
+    const admin = createAdminClient()
+
+    // Marquer les versions précédentes comme non-courantes
+    if (version > 1) {
+      await db(admin).from('phase_files').update({ is_current: false }).eq('phase_id', phaseId)
+    }
+
+    const { data: rawFile, error: insertErr } = await db(admin)
+      .from('phase_files')
+      .insert({
+        phase_id: phaseId,
+        uploaded_by: user.id,
+        file_name: fileName,
+        file_url: storagePath,
+        file_type: fileType,
+        file_size: fileSize,
+        version,
+        is_current: true,
+      })
+      .select('id, phase_id, uploaded_by, file_name, file_url, file_type, file_size, version, is_current, created_at')
+      .single()
+
+    if (insertErr || !rawFile) {
+      // Nettoyer le fichier uploadé si l'insert échoue
+      await admin.storage.from('project-files').remove([storagePath])
+      return { success: false, error: `Erreur d'enregistrement : ${insertErr?.message ?? 'erreur inconnue'}` }
+    }
+
+    // Log d'activité
+    await db(admin).from('activity_logs').insert({
+      project_id: projectId,
+      user_id: user.id,
+      action: 'file_uploaded',
+      details: { file_name: fileName, version },
+    })
+
+    revalidatePath(`/projects/${projectId}`)
+
+    // Générer une URL de lecture signée
+    const signedUrl = await generateSignedUrl(admin, storagePath)
+    const resultFile = { ...(rawFile as Omit<VideoFile, 'file_url'>), file_url: signedUrl } as VideoFile
+
+    return { success: true, file: resultFile }
+  } catch (err) {
+    console.error('[recordVideoUpload]', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inattendue' }
+  }
+}
+
+// ── uploadVideo (legacy — NE FONCTIONNE PAS sur Vercel pour >4.5 MB) ──
+// Conservé pour compatibilité mais non utilisé en production.
+// Vercel Serverless Functions rejettent les bodies >4.5 MB avant même
+// d'atteindre le code Next.js. Utiliser createVideoUploadUrl + recordVideoUpload.
 
 export async function uploadVideo(formData: FormData): Promise<
   { success: true; file: VideoFile } | { success: false; error: string }
 > {
-  const ctx = await getCreativeContext()
-  if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
-  const { user, supabase } = ctx
+  try {
+    const ctx = await getCreativeContext()
+    if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+    const { user, supabase } = ctx
 
-  const phaseId = formData.get('phaseId') as string
-  const projectId = formData.get('projectId') as string
-  const file = formData.get('file') as File
+    const phaseId = formData.get('phaseId') as string
+    const projectId = formData.get('projectId') as string
+    const file = formData.get('file') as File
 
-  if (!phaseId || !projectId) return { success: false, error: 'Données manquantes' }
-  if (!file || file.size === 0) return { success: false, error: 'Aucun fichier sélectionné' }
+    if (!phaseId || !projectId) return { success: false, error: 'Données manquantes' }
+    if (!file || file.size === 0) return { success: false, error: 'Aucun fichier sélectionné' }
 
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-  const canonicalMime = VIDEO_MIME[ext]
-  if (!canonicalMime) {
-    return { success: false, error: `Format non supporté : ${file.name} — MP4, MOV, WebM uniquement` }
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    const canonicalMime = VIDEO_MIME[ext]
+    if (!canonicalMime) {
+      return { success: false, error: `Format non supporté : ${file.name} — MP4, MOV, WebM uniquement` }
+    }
+    if (file.size > 500 * 1024 * 1024) {
+      return { success: false, error: `Fichier trop lourd (max 500 MB)` }
+    }
+
+    const admin = createAdminClient()
+
+    const { data: maxRow } = await admin
+      .from('phase_files')
+      .select('version')
+      .eq('phase_id', phaseId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const nextVersion = ((maxRow as { version: number } | null)?.version ?? 0) + 1
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const storagePath = `${projectId}/animation/v${nextVersion}/${safeFileName}`
+
+    const fileBuffer = await file.arrayBuffer()
+    const { error: uploadErr } = await admin.storage
+      .from('project-files')
+      .upload(storagePath, fileBuffer, { contentType: canonicalMime, upsert: false })
+
+    if (uploadErr) return { success: false, error: `Erreur upload : ${uploadErr.message}` }
+
+    if (nextVersion > 1) {
+      await db(admin).from('phase_files').update({ is_current: false }).eq('phase_id', phaseId)
+    }
+
+    const { data: rawFile, error: insertErr } = await db(admin)
+      .from('phase_files')
+      .insert({
+        phase_id: phaseId,
+        uploaded_by: user.id,
+        file_name: file.name,
+        file_url: storagePath,
+        file_type: canonicalMime,
+        file_size: file.size,
+        version: nextVersion,
+        is_current: true,
+      })
+      .select('id, phase_id, uploaded_by, file_name, file_url, file_type, file_size, version, is_current, created_at')
+      .single()
+
+    if (insertErr || !rawFile) {
+      await admin.storage.from('project-files').remove([storagePath])
+      return { success: false, error: 'Erreur lors de la création du fichier' }
+    }
+
+    const { data: rawPhase } = await supabase
+      .from('project_phases')
+      .select('project_id')
+      .eq('id', phaseId)
+      .maybeSingle()
+    const projectIdFromPhase = (rawPhase as Pick<ProjectPhase, 'project_id'> | null)?.project_id
+
+    if (projectIdFromPhase) {
+      await db(admin).from('activity_logs').insert({
+        project_id: projectIdFromPhase,
+        user_id: user.id,
+        action: 'file_uploaded',
+        details: { file_name: file.name, version: nextVersion },
+      })
+      revalidatePath(`/projects/${projectIdFromPhase}`)
+    }
+
+    const signedUrl = await generateSignedUrl(admin, storagePath)
+    const resultFile = { ...(rawFile as Omit<VideoFile, 'file_url'>), file_url: signedUrl } as VideoFile
+
+    return { success: true, file: resultFile }
+  } catch (err) {
+    console.error('[uploadVideo]', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inattendue' }
   }
-  if (file.type && !VALID_VIDEO_MIMES.has(file.type)) {
-    return { success: false, error: `Type MIME non supporté : ${file.type}` }
-  }
-  if (file.size > 500 * 1024 * 1024) {
-    return { success: false, error: `Fichier trop lourd : ${file.name} (max 500 MB)` }
-  }
-
-  const admin = createAdminClient()
-
-  // Compute next version number
-  const { data: maxRow } = await admin
-    .from('phase_files')
-    .select('version')
-    .eq('phase_id', phaseId)
-    .order('version', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const nextVersion = ((maxRow as { version: number } | null)?.version ?? 0) + 1
-  const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-  const storagePath = `${projectId}/animation/v${nextVersion}/${safeFileName}`
-
-  const fileBuffer = await file.arrayBuffer()
-  const { error: uploadErr } = await admin.storage
-    .from('project-files')
-    .upload(storagePath, fileBuffer, { contentType: canonicalMime, upsert: false })
-
-  if (uploadErr) return { success: false, error: `Erreur upload : ${uploadErr.message}` }
-
-  // Mark previous version as not current
-  if (nextVersion > 1) {
-    await db(admin).from('phase_files').update({ is_current: false }).eq('phase_id', phaseId)
-  }
-
-  const { data: rawFile, error: insertErr } = await db(admin)
-    .from('phase_files')
-    .insert({
-      phase_id: phaseId,
-      uploaded_by: user.id,
-      file_name: file.name,
-      file_url: storagePath,
-      file_type: canonicalMime,
-      file_size: file.size,
-      version: nextVersion,
-      is_current: true,
-    })
-    .select('id, phase_id, uploaded_by, file_name, file_url, file_type, file_size, version, is_current, created_at')
-    .single()
-
-  if (insertErr || !rawFile) {
-    await admin.storage.from('project-files').remove([storagePath])
-    return { success: false, error: 'Erreur lors de la création du fichier' }
-  }
-
-  // Get phase for project_id revalidation
-  const { data: rawPhase } = await supabase
-    .from('project_phases')
-    .select('project_id')
-    .eq('id', phaseId)
-    .maybeSingle()
-  const projectIdFromPhase = (rawPhase as Pick<ProjectPhase, 'project_id'> | null)?.project_id
-
-  if (projectIdFromPhase) {
-    await db(admin).from('activity_logs').insert({
-      project_id: projectIdFromPhase,
-      user_id: user.id,
-      action: 'file_uploaded',
-      details: { file_name: file.name, version: nextVersion },
-    })
-    revalidatePath(`/projects/${projectIdFromPhase}`)
-  }
-
-  const signedUrl = await generateSignedUrl(admin, storagePath)
-  const resultFile = { ...(rawFile as Omit<VideoFile, 'file_url'>), file_url: signedUrl } as VideoFile
-
-  return { success: true, file: resultFile }
 }
 
 // ── addTimecodedComment ───────────────────────────────────────────

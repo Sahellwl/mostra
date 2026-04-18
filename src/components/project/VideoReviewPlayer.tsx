@@ -29,7 +29,8 @@ import type { PhaseStatus, UserRole } from '@/lib/types'
 import type { VideoFile, VideoComment } from '@/app/projects/video-actions'
 import {
   getVideoData,
-  uploadVideo,
+  createVideoUploadUrl,
+  recordVideoUpload,
   addTimecodedComment,
   resolveVideoComment,
   deleteVideoComment,
@@ -202,19 +203,76 @@ function UploadZone({ phaseId, projectId, onUploaded, isNewVersion = false }: Up
 
   async function handleFile(file: File) {
     setIsUploading(true)
-    setProgress('Envoi en cours…')
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('phaseId', phaseId)
-    fd.append('projectId', projectId)
-    const result = await uploadVideo(fd)
+    setProgress('Préparation…')
+
+    // Déterminer le MIME canonique depuis l'extension
+    const VIDEO_MIME: Record<string, string> = {
+      mp4: 'video/mp4', mov: 'video/quicktime',
+      webm: 'video/webm', avi: 'video/x-msvideo',
+    }
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    const mimeType = VIDEO_MIME[ext] ?? file.type ?? 'video/mp4'
+
+    // ── Étape 1 : obtenir la signed upload URL (Server Action légère, pas de fichier) ──
+    const urlResult = await createVideoUploadUrl({
+      phaseId, projectId,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType,
+    })
+
+    if (!urlResult.success) {
+      setIsUploading(false)
+      setProgress(null)
+      toast.error(urlResult.error)
+      return
+    }
+
+    // ── Étape 2 : upload direct navigateur → Supabase Storage (bypass Vercel) ──
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100)
+            setProgress(`Upload ${pct}%`)
+          }
+        }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve()
+          else reject(new Error(`Erreur serveur ${xhr.status} : ${xhr.responseText}`))
+        }
+        xhr.onerror = () => reject(new Error('Erreur réseau — vérifiez votre connexion'))
+        xhr.open('PUT', urlResult.uploadUrl)
+        xhr.setRequestHeader('Content-Type', mimeType)
+        xhr.send(file)
+      })
+    } catch (err) {
+      setIsUploading(false)
+      setProgress(null)
+      toast.error(err instanceof Error ? err.message : 'Upload échoué')
+      return
+    }
+
+    // ── Étape 3 : enregistrer les métadonnées en base (Server Action légère) ──
+    setProgress('Enregistrement…')
+    const recordResult = await recordVideoUpload({
+      phaseId, projectId,
+      storagePath: urlResult.storagePath,
+      fileName: file.name,
+      fileType: mimeType,
+      fileSize: file.size,
+      version: urlResult.version,
+    })
+
     setIsUploading(false)
     setProgress(null)
-    if (result.success) {
+
+    if (recordResult.success) {
       toast.success('Vidéo uploadée avec succès')
-      onUploaded(result.file)
+      onUploaded(recordResult.file)
     } else {
-      toast.error(result.error)
+      toast.error(recordResult.error)
     }
   }
 
