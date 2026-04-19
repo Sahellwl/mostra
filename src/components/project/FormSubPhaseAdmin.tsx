@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   FileText,
   ChevronDown,
@@ -85,6 +86,7 @@ export default function FormSubPhaseAdmin({
   projectId,
   phaseId,
 }: FormSubPhaseAdminProps) {
+  const router = useRouter()
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
     templates[0]?.id ?? '',
   )
@@ -107,8 +109,12 @@ export default function FormSubPhaseAdmin({
     setApplying(true)
     const result = await applyFormTemplate(subPhaseId, selectedTemplateId)
     setApplying(false)
-    if (!result.success) toast.error((result as { error: string }).error)
-    else toast.success('Template appliqué')
+    if (!result.success) {
+      toast.error((result as { error: string }).error)
+    } else {
+      toast.success('Template appliqué')
+      router.refresh()
+    }
   }
 
   // ── Reset ───────────────────────────────────────────────────────
@@ -117,8 +123,12 @@ export default function FormSubPhaseAdmin({
     setResetting(true)
     const result = await resetForm(subPhaseId)
     setResetting(false)
-    if (!result.success) toast.error((result as { error: string }).error)
-    else toast.success('Formulaire réinitialisé')
+    if (!result.success) {
+      toast.error((result as { error: string }).error)
+    } else {
+      toast.success('Formulaire réinitialisé')
+      router.refresh()
+    }
   }
 
   // ── Send to client ──────────────────────────────────────────────

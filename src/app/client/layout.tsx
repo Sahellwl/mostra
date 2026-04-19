@@ -29,13 +29,13 @@ export default async function ClientLayout({ children }: { children: React.React
             {user ? (
               <>
                 <Link
-                  href="/dashboard"
+                  href="/client/dashboard"
                   className="
                     text-xs text-[#666666] hover:text-white transition-colors
                     px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:border-[#444444]
                   "
                 >
-                  Dashboard
+                  Mes projets
                 </Link>
                 <ClientLogout />
               </>

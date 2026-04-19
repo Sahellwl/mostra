@@ -24,7 +24,8 @@ import {
   unapproveSubPhase,
 } from '@/app/projects/sub-phase-actions'
 import {
-  createAudioTrack,
+  createAudioUploadUrl,
+  recordAudioUpload,
   updateAudioTrack,
   deleteAudioTrack,
   type AudioTrack,
@@ -425,6 +426,15 @@ function AddTrackForm({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [progress, setProgress] = useState<string | null>(null)
+
+  const AUDIO_MIME: Record<string, string> = {
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    m4a: 'audio/mp4',
+    aac: 'audio/aac',
+  }
 
   function handleFileSelect(file: File) {
     setSelectedFile(file)
@@ -447,27 +457,78 @@ function AddTrackForm({
   async function handleSubmit() {
     if (!selectedFile || !title.trim()) return
     setUploading(true)
+    setProgress('Préparation…')
 
-    const formData = new FormData()
-    formData.set('subPhaseId', subPhaseId)
-    formData.set('projectId', projectId)
-    formData.set('title', title.trim())
-    formData.set('description', description.trim())
-    formData.set('kind', kind)
-    formData.set('file', selectedFile)
+    try {
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase() ?? ''
+      const canonicalMime = AUDIO_MIME[ext] ?? selectedFile.type
 
-    const result = await createAudioTrack(formData)
-    setUploading(false)
+      // Étape 1 : obtenir l'URL d'upload signée (aucun byte de fichier via Vercel)
+      const urlResult = await createAudioUploadUrl({
+        subPhaseId,
+        projectId,
+        title: title.trim(),
+        description: description.trim(),
+        kind,
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+        mimeType: canonicalMime,
+      })
 
-    if (!result.success) {
-      toast.error((result as { error: string }).error)
-    } else {
+      if (!urlResult.success) {
+        toast.error(urlResult.error)
+        setUploading(false)
+        setProgress(null)
+        return
+      }
+
+      const { uploadUrl, storagePath, blockId } = urlResult
+
+      // Étape 2 : upload direct navigateur → Supabase Storage (bypass Vercel)
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100)
+            setProgress(`Upload ${pct}%`)
+          }
+        }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve()
+          } else {
+            reject(new Error(`Erreur upload : HTTP ${xhr.status}`))
+          }
+        }
+        xhr.onerror = () => reject(new Error('Erreur réseau'))
+        xhr.open('PUT', uploadUrl)
+        xhr.setRequestHeader('Content-Type', canonicalMime)
+        xhr.send(selectedFile)
+      })
+
+      setProgress('Enregistrement…')
+
+      // Étape 3 : enregistrer les métadonnées (aucun byte de fichier via Vercel)
+      const recordResult = await recordAudioUpload({ blockId, subPhaseId, storagePath, canonicalMime })
+
+      if (!recordResult.success) {
+        toast.error(recordResult.error)
+        setUploading(false)
+        setProgress(null)
+        return
+      }
+
       toast.success('Piste ajoutée')
-      onTrackAdded((result as { track: AudioTrack }).track)
+      onTrackAdded(recordResult.track)
       setTitle('')
       setDescription('')
       setSelectedFile(null)
       setOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur inattendue')
+    } finally {
+      setUploading(false)
+      setProgress(null)
     }
   }
 
@@ -555,7 +616,7 @@ function AddTrackForm({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00D76B]/10 border border-[#00D76B]/20 text-[#00D76B] text-xs font-medium hover:bg-[#00D76B]/20 transition-colors disabled:opacity-40"
         >
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-          {uploading ? 'Import…' : 'Importer'}
+          {uploading ? (progress ?? 'Import…') : 'Importer'}
         </button>
         <button
           type="button"

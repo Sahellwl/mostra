@@ -12,6 +12,14 @@ export type AudioCreateResult =
   | { success: true; track: AudioTrack }
   | { success: false; error: string }
 
+export type AudioUploadUrlResult =
+  | { success: true; uploadUrl: string; storagePath: string; blockId: string }
+  | { success: false; error: string }
+
+export type AudioRecordResult =
+  | { success: true; track: AudioTrack }
+  | { success: false; error: string }
+
 export interface AudioTrack {
   id: string
   content: AudioTrackContent
@@ -107,7 +115,176 @@ export async function getAudioTracks(subPhaseId: string): Promise<AudioTrack[]> 
   return enrichTracksWithSignedUrls(admin, tracks)
 }
 
-// ── createAudioTrack ──────────────────────────────────────────────
+// ── createAudioUploadUrl ──────────────────────────────────────────
+// Étape 1 du flow client-direct : valide le fichier, crée le bloc
+// placeholder et génère une signed upload URL pour que le navigateur
+// puisse uploader directement vers Supabase (bypass limite Vercel 4.5 MB).
+
+export async function createAudioUploadUrl(input: {
+  subPhaseId: string
+  projectId: string
+  title: string
+  description: string
+  kind: 'vo' | 'music'
+  fileName: string
+  fileSize: number
+  mimeType: string
+}): Promise<AudioUploadUrlResult> {
+  try {
+    const ctx = await getCreativeContext()
+    if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+    const { supabase, user } = ctx
+
+    const { subPhaseId, projectId, title, description, kind, fileName, fileSize, mimeType } = input
+
+    if (!subPhaseId || !projectId) return { success: false, error: 'Données manquantes' }
+    if (!title.trim()) return { success: false, error: 'Le titre est requis' }
+    if (!fileName) return { success: false, error: 'Nom de fichier manquant' }
+
+    const AUDIO_MIME: Record<string, string> = {
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+    }
+
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
+    const canonicalMime = AUDIO_MIME[ext] ?? mimeType
+    if (!canonicalMime || !canonicalMime.startsWith('audio/')) {
+      return { success: false, error: `Format non supporté : .${ext} — MP3, WAV, OGG, M4A, AAC uniquement` }
+    }
+    if (fileSize > 50 * 1024 * 1024) {
+      return { success: false, error: `Fichier trop lourd (max 50 MB)` }
+    }
+
+    const admin = createAdminClient()
+
+    // Calcul du prochain sort_order
+    const { data: maxRow } = await supabase
+      .from('phase_blocks')
+      .select('sort_order')
+      .eq('sub_phase_id', subPhaseId)
+      .eq('type', 'audio_track')
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const nextOrder = ((maxRow as { sort_order: number } | null)?.sort_order ?? 0) + 1
+
+    // Bloc placeholder (audio_url vide — sera rempli dans recordAudioUpload)
+    const placeholder: AudioTrackContent = {
+      title: title.trim(),
+      audio_url: '',
+      description: description.trim(),
+      kind,
+      is_selected: false,
+    }
+
+    const { data: rawBlock, error: insertErr } = await db(admin)
+      .from('phase_blocks')
+      .insert({
+        sub_phase_id: subPhaseId,
+        phase_id: null,
+        type: 'audio_track',
+        content: placeholder,
+        sort_order: nextOrder,
+        is_approved: false,
+        created_by: user.id,
+      })
+      .select('id')
+      .single()
+
+    if (insertErr || !rawBlock) return { success: false, error: 'Erreur création du bloc' }
+
+    const blockId = (rawBlock as { id: string }).id
+    const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const storagePath = `${projectId}/audio/${blockId}/${safeFileName}`
+
+    // Signed upload URL — le fichier ira directement du navigateur à Supabase
+    const { data: signedData, error: signErr } = await admin.storage
+      .from('project-files')
+      .createSignedUploadUrl(storagePath)
+
+    if (signErr || !signedData?.signedUrl) {
+      // Nettoyer le bloc créé si l'URL échoue
+      await admin.from('phase_blocks').delete().eq('id', blockId)
+      return { success: false, error: `Impossible de créer l'URL d'upload : ${signErr?.message ?? 'erreur inconnue'}` }
+    }
+
+    return {
+      success: true,
+      uploadUrl: signedData.signedUrl,
+      storagePath,
+      blockId,
+    }
+  } catch (err) {
+    console.error('[createAudioUploadUrl]', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inattendue' }
+  }
+}
+
+// ── recordAudioUpload ─────────────────────────────────────────────
+// Étape 3 du flow client-direct : après l'upload navigateur→Supabase,
+// met à jour le bloc avec le storage path et retourne la piste avec URL signée.
+
+export async function recordAudioUpload(input: {
+  blockId: string
+  subPhaseId: string
+  storagePath: string
+  canonicalMime: string
+}): Promise<AudioRecordResult> {
+  try {
+    const ctx = await getCreativeContext()
+    if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+
+    const { blockId, subPhaseId, storagePath, canonicalMime } = input
+
+    const admin = createAdminClient()
+
+    // Récupérer le bloc pour lire le contenu existant
+    const { data: rawBlock } = await admin
+      .from('phase_blocks')
+      .select('id, content, sort_order')
+      .eq('id', blockId)
+      .maybeSingle()
+
+    if (!rawBlock) return { success: false, error: 'Bloc introuvable' }
+
+    const block = rawBlock as { id: string; content: AudioTrackContent; sort_order: number }
+    const updatedContent: AudioTrackContent = { ...block.content, audio_url: storagePath }
+
+    const { error: updateErr } = await db(admin)
+      .from('phase_blocks')
+      .update({ content: updatedContent })
+      .eq('id', blockId)
+
+    if (updateErr) return { success: false, error: `Erreur mise à jour : ${updateErr.message}` }
+
+    // URL signée pour lecture immédiate
+    const { data: signedData } = await admin.storage
+      .from('project-files')
+      .createSignedUrl(storagePath, 3600)
+
+    // Revalider les chemins
+    const parents = await resolveParents(ctx.supabase, subPhaseId)
+    if (parents) revalidateAudio(parents.phase.project_id, parents.phase.id, subPhaseId)
+
+    return {
+      success: true,
+      track: {
+        id: blockId,
+        content: { ...updatedContent, audio_url: signedData?.signedUrl ?? '' },
+        sort_order: block.sort_order,
+      },
+    }
+  } catch (err) {
+    console.error('[recordAudioUpload]', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Erreur inattendue' }
+  }
+}
+
+// ── createAudioTrack (legacy — non utilisé sur Vercel >4.5 MB) ────
 
 export async function createAudioTrack(
   formData: FormData,

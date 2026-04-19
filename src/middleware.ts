@@ -9,6 +9,10 @@ const MEMBERLESS_ROUTES = ['/onboarding']
 
 const PUBLIC_PREFIXES = ['/invite/', '/client/']
 
+// Routes réservées aux membres d'agence (super_admin, agency_admin, creative)
+// Un client qui tente d'y accéder est redirigé vers /client/dashboard
+const AGENCY_PREFIXES = ['/dashboard', '/projects', '/settings', '/clients', '/admin']
+
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_ROUTES.includes(pathname)) return true
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
@@ -26,6 +30,19 @@ function getDashboardByRole(role: string | null): string {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getMemberRole(supabase: any, userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('agency_members')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('invited_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data as { role: string } | null)?.role ?? null
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const { supabaseResponse, user, supabase } = await updateSession(request)
@@ -41,16 +58,7 @@ export async function middleware(request: NextRequest) {
 
   // Utilisateur authentifié sur /login ou /register → dashboard selon rôle
   if (user && (pathname === '/login' || pathname === '/register')) {
-    const { data: memberData } = await supabase
-      .from('agency_members')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('invited_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const role = (memberData as { role: string } | null)?.role ?? null
+    const role = await getMemberRole(supabase, user.id)
 
     // Pas de membership → envoyer vers /onboarding
     if (!role) {
@@ -66,19 +74,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Protection de la route /admin — réservée aux super_admin
-  if (pathname.startsWith('/admin') && user) {
-    const { data: member } = await supabase
-      .from('agency_members')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'super_admin')
-      .eq('is_active', true)
-      .maybeSingle()
+  // Protection des routes agence : les clients n'ont pas accès
+  // Redirige vers /client/dashboard si le rôle est 'client'
+  if (user && AGENCY_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    const role = await getMemberRole(supabase, user.id)
 
-    if (!member) {
+    if (role === 'client') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/client/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
+    // Protection de la route /admin — réservée aux super_admin
+    if (pathname.startsWith('/admin') && role !== 'super_admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
+      url.search = ''
       return NextResponse.redirect(url)
     }
   }
