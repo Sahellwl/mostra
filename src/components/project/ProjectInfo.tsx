@@ -1,6 +1,13 @@
 import { Mail, Phone, MessageCircle, Calendar } from 'lucide-react'
 import { formatDate } from '@/lib/utils/dates'
+import AssignClientButton from './AssignClientButton'
 import type { ContactMethod, Profile, Project } from '@/lib/types'
+
+interface ClientOption {
+  userId: string
+  fullName: string
+  email: string
+}
 
 const CONTACT_ICONS: Record<ContactMethod, typeof Mail> = {
   email: Mail,
@@ -26,9 +33,17 @@ interface ProjectInfoProps {
   project: Project
   client: Profile | null
   projectManager: Profile | null
+  isAdmin?: boolean
+  availableClients?: ClientOption[]
 }
 
-export default function ProjectInfo({ project, client, projectManager }: ProjectInfoProps) {
+export default function ProjectInfo({
+  project,
+  client,
+  projectManager,
+  isAdmin = false,
+  availableClients = [],
+}: ProjectInfoProps) {
   const progressColor =
     project.progress >= 75
       ? 'text-[#22C55E]'
@@ -76,6 +91,13 @@ export default function ProjectInfo({ project, client, projectManager }: Project
           </>
         ) : (
           <p className="text-sm text-[#444444] italic">Aucun client assigné</p>
+        )}
+        {isAdmin && (
+          <AssignClientButton
+            projectId={project.id}
+            currentClientId={project.client_id}
+            clients={availableClients}
+          />
         )}
       </div>
 

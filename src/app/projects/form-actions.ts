@@ -240,3 +240,154 @@ export async function submitFormAnswers(
 
   return { success: true }
 }
+
+// ── saveAdminAnswer ───────────────────────────────────────────────
+// Admin/créatif remplit une réponse au nom du client.
+
+export async function saveAdminAnswer(
+  blockId: string,
+  answer: string,
+): Promise<FormActionResult> {
+  const ctx = await getAdminContext()
+  if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+
+  const admin = createAdminClient()
+
+  const { data: rawBlock } = await admin
+    .from('phase_blocks')
+    .select('id, content, sub_phase_id')
+    .eq('id', blockId)
+    .maybeSingle()
+
+  if (!rawBlock) return { success: false, error: 'Bloc introuvable' }
+  const block = rawBlock as { id: string; content: FormQuestionContent; sub_phase_id: string | null }
+
+  const newContent = { ...(block.content as unknown as Record<string, unknown>), answer }
+  const { error } = await db(admin).from('phase_blocks').update({ content: newContent }).eq('id', blockId)
+  if (error) return { success: false, error: error.message }
+
+  if (block.sub_phase_id) {
+    const parents = await getSubPhaseParents(admin, block.sub_phase_id)
+    if (parents) {
+      revalidatePath(`/projects/${parents.phase.project_id}`)
+      revalidatePath(`/projects/${parents.phase.project_id}/phases/${parents.phase.id}/sub/${block.sub_phase_id}`)
+    }
+  }
+
+  return { success: true }
+}
+
+// ── addFormQuestion ───────────────────────────────────────────────
+
+export async function addFormQuestion(
+  subPhaseId: string,
+  question: Pick<FormQuestionContent, 'label' | 'type' | 'helpText' | 'required'>,
+): Promise<FormActionResult & { blockId?: string }> {
+  const ctx = await getAdminContext()
+  if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+
+  const admin = createAdminClient()
+
+  const { data: maxRow } = await admin
+    .from('phase_blocks')
+    .select('sort_order')
+    .eq('sub_phase_id', subPhaseId)
+    .eq('type', 'form_question')
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const nextOrder = ((maxRow as { sort_order: number } | null)?.sort_order ?? 0) + 1
+
+  const content: FormQuestionContent = {
+    label: question.label,
+    type: question.type,
+    helpText: question.helpText ?? '',
+    required: question.required ?? false,
+    answer: null,
+  }
+
+  const { data: rawBlock, error } = await db(admin)
+    .from('phase_blocks')
+    .insert({
+      sub_phase_id: subPhaseId,
+      phase_id: null,
+      type: 'form_question',
+      content,
+      sort_order: nextOrder,
+      is_approved: false,
+      created_by: null,
+    })
+    .select('id')
+    .single()
+
+  if (error || !rawBlock) return { success: false, error: error?.message ?? 'Erreur création' }
+
+  const blockId = (rawBlock as { id: string }).id
+
+  const parents = await getSubPhaseParents(admin, subPhaseId)
+  if (parents) {
+    revalidatePath(`/projects/${parents.phase.project_id}`)
+    revalidatePath(`/projects/${parents.phase.project_id}/phases/${parents.phase.id}/sub/${subPhaseId}`)
+  }
+
+  return { success: true, blockId }
+}
+
+// ── updateFormQuestion ────────────────────────────────────────────
+
+export async function updateFormQuestion(
+  blockId: string,
+  patch: Partial<Pick<FormQuestionContent, 'label' | 'type' | 'helpText' | 'required'>>,
+): Promise<FormActionResult> {
+  const ctx = await getAdminContext()
+  if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+
+  const admin = createAdminClient()
+
+  const { data: rawBlock } = await admin
+    .from('phase_blocks')
+    .select('id, content, sub_phase_id')
+    .eq('id', blockId)
+    .maybeSingle()
+
+  if (!rawBlock) return { success: false, error: 'Bloc introuvable' }
+  const block = rawBlock as { id: string; content: FormQuestionContent; sub_phase_id: string | null }
+
+  const newContent: FormQuestionContent = { ...block.content, ...patch }
+  const { error } = await db(admin).from('phase_blocks').update({ content: newContent }).eq('id', blockId)
+  if (error) return { success: false, error: error.message }
+
+  return { success: true }
+}
+
+// ── deleteFormQuestion ────────────────────────────────────────────
+
+export async function deleteFormQuestion(blockId: string): Promise<FormActionResult> {
+  const ctx = await getAdminContext()
+  if (!ctx) return { success: false, error: 'Permissions insuffisantes' }
+
+  const admin = createAdminClient()
+
+  const { data: rawBlock } = await admin
+    .from('phase_blocks')
+    .select('id, sub_phase_id')
+    .eq('id', blockId)
+    .maybeSingle()
+
+  if (!rawBlock) return { success: false, error: 'Bloc introuvable' }
+  const block = rawBlock as { id: string; sub_phase_id: string | null }
+
+  const { error } = await admin.from('phase_blocks').delete().eq('id', blockId)
+  if (error) return { success: false, error: error.message }
+
+  if (block.sub_phase_id) {
+    const parents = await getSubPhaseParents(admin, block.sub_phase_id)
+    if (parents) {
+      revalidatePath(`/projects/${parents.phase.project_id}`)
+      revalidatePath(`/projects/${parents.phase.project_id}/phases/${parents.phase.id}/sub/${block.sub_phase_id}`)
+    }
+  }
+
+  return { success: true }
+}

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentMember, getProjectDetail } from '@/lib/supabase/queries'
+import { getCurrentMember, getProjectDetail, getAgencyMembersWithProfiles } from '@/lib/supabase/queries'
 import StatusBadge from '@/components/shared/StatusBadge'
 import PhaseCard from '@/components/project/PhaseCard'
 import ProjectInfo from '@/components/project/ProjectInfo'
@@ -44,6 +44,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   const { project, client, projectManager, phases, subPhasesByPhase, filesByPhase, comments, activity } = data
   const userRole = membership.member.role
+  const isAdmin = userRole === 'super_admin' || userRole === 'agency_admin'
+
+  // Membres clients de l'agence pour le sélecteur d'assignation
+  const clientMembers = isAdmin
+    ? await getAgencyMembersWithProfiles(supabase, membership.agency?.id ?? '', ['client'])
+    : []
+
+  const availableClients = clientMembers.map((m) => ({
+    userId: m.userId,
+    fullName: m.profile.full_name,
+    email: m.profile.email,
+  }))
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] px-6 py-8">
@@ -134,7 +146,13 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
           {/* Droite — infos + activité */}
           <div className="space-y-4">
-            <ProjectInfo project={project} client={client} projectManager={projectManager} />
+            <ProjectInfo
+              project={project}
+              client={client}
+              projectManager={projectManager}
+              isAdmin={isAdmin}
+              availableClients={availableClients}
+            />
             <ActivityLog activity={activity} projectId={project.id} />
             {(userRole === 'super_admin' || userRole === 'agency_admin') && (
               <DangerZone

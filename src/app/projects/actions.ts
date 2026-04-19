@@ -378,3 +378,62 @@ export async function archiveProject(projectId: string): Promise<ProjectActionRe
   revalidatePath(`/projects/${projectId}`)
   return { success: true }
 }
+
+// ── assignClient ─────────────────────────────────────────────────
+// Assigne (ou retire) le client d'un projet après création.
+
+export async function assignClient(
+  projectId: string,
+  clientUserId: string | null,
+): Promise<ProjectActionResult> {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Non authentifié.' }
+
+  const { data: rawMember } = await supabase
+    .from('agency_members')
+    .select('agency_id, role')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .order('invited_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!rawMember) return { success: false, error: 'Membre introuvable.' }
+  const member = rawMember as { agency_id: string; role: string }
+
+  if (member.role !== 'super_admin' && member.role !== 'agency_admin') {
+    return { success: false, error: 'Permissions insuffisantes.' }
+  }
+
+  // Vérifier que le client assigné appartient bien à l'agence (si non-null)
+  if (clientUserId) {
+    const { data: clientMember } = await supabase
+      .from('agency_members')
+      .select('id')
+      .eq('user_id', clientUserId)
+      .eq('agency_id', member.agency_id)
+      .eq('role', 'client')
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (!clientMember) {
+      return { success: false, error: 'Client introuvable dans cette agence.' }
+    }
+  }
+
+  const { error } = await db(supabase)
+    .from('projects')
+    .update({ client_id: clientUserId })
+    .eq('id', projectId)
+    .eq('agency_id', member.agency_id)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/projects/${projectId}`)
+  return { success: true }
+}
