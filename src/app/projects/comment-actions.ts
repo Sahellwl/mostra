@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { db } from '@/lib/supabase/helpers'
 import { getCurrentMember } from '@/lib/supabase/queries'
+import { createNotifications, getProjectRecipients } from '@/lib/notifications'
+import { sendEmail } from '@/lib/email/send'
 
 export type CommentActionResult = { success: true } | { success: false; error: string }
 
@@ -51,6 +53,77 @@ export async function addComment(input: {
       action: 'comment_added',
       details: { preview: input.content.slice(0, 80) },
     })
+
+  // ── Notifications ────────────────────────────────────────────────
+  // Fire-and-forget: do not await so we don't block the response
+  void (async () => {
+    const r = await getProjectRecipients(input.projectId)
+    if (!r.projectName) return
+
+    const commentorRole = membership.member.role
+    const isClientComment = commentorRole === 'client'
+
+    // Get commenter's name
+    const admin = createAdminClient()
+    const { data: rawProfile } = await admin
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle()
+    const authorName = (rawProfile as { full_name: string } | null)?.full_name ?? 'Quelqu\'un'
+    const preview = input.content.slice(0, 120)
+    const link = `/projects/${input.projectId}`
+    const title = `💬 Nouveau commentaire sur « ${r.projectName} »`
+    const message = `${authorName} : "${preview}"`
+
+    if (isClientComment) {
+      // Client commented → notify all admins + PM
+      const recipientIds = [...new Set([
+        ...r.adminIds,
+        ...(r.projectManagerId ? [r.projectManagerId] : []),
+      ])].filter((id) => id !== user.id)
+
+      await createNotifications(
+        recipientIds.map((userId) => ({
+          userId,
+          agencyId: r.agencyId,
+          projectId: input.projectId,
+          type: 'comment_added' as const,
+          title,
+          message,
+          link,
+        })),
+      )
+    } else {
+      // Agency member commented → notify client
+      if (r.clientId && r.clientId !== user.id) {
+        await createNotifications([{
+          userId: r.clientId,
+          agencyId: r.agencyId,
+          projectId: input.projectId,
+          type: 'comment_added' as const,
+          title,
+          message,
+          link: r.shareToken ? `/client/${r.shareToken}` : null,
+        }])
+
+        // Email client
+        if (r.clientEmail) {
+          void sendEmail({
+            to: r.clientEmail,
+            template: 'comment_added',
+            data: {
+              projectName: r.projectName,
+              agencyName: r.agencyName,
+              authorName,
+              preview,
+            },
+            link: r.shareToken ? `/client/${r.shareToken}` : undefined,
+          })
+        }
+      }
+    }
+  })()
 
   revalidatePath(`/projects/${input.projectId}`)
   return { success: true }

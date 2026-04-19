@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/supabase/helpers'
 import { getCurrentMember } from '@/lib/supabase/queries'
+import { createNotification, createNotifications, getProjectRecipients } from '@/lib/notifications'
+import { sendEmail } from '@/lib/email/send'
 import type { SubPhase, ProjectPhase } from '@/lib/types'
 
 export type SubPhaseActionResult = { success: true } | { success: false; error: string }
@@ -117,6 +119,7 @@ export async function startSubPhase(subPhaseId: string): Promise<SubPhaseActionR
 
 // ── sendSubPhaseToReview ──────────────────────────────────────────
 
+
 export async function sendSubPhaseToReview(subPhaseId: string): Promise<SubPhaseActionResult> {
   const ctx = await getAuthContext()
   if (!ctx) return { success: false, error: 'Non authentifié' }
@@ -148,6 +151,54 @@ export async function sendSubPhaseToReview(subPhaseId: string): Promise<SubPhase
     action: 'phase_review',
     details: { phase_name: `${phase.name} › ${sp.name}` },
   })
+
+  // ── Notify client that phase is ready for review ─────────────────
+  void (async () => {
+    const r = await getProjectRecipients(phase.project_id)
+    if (!r.clientId) return
+
+    const subPhaseLink = r.shareToken
+      ? `/client/${r.shareToken}/phases/${phase.id}/sub/${subPhaseId}`
+      : null
+    const adminLink = `/projects/${phase.project_id}/phases/${phase.id}/sub/${subPhaseId}`
+
+    await createNotification({
+      userId: r.clientId,
+      agencyId: r.agencyId,
+      projectId: phase.project_id,
+      type: 'phase_ready',
+      title: `✅ ${sp.name} est prête pour votre validation`,
+      message: `Phase ${phase.name} — disponible pour révision.`,
+      link: subPhaseLink,
+    })
+
+    // Notify admins too
+    await createNotifications(
+      r.adminIds.filter((id) => id !== user.id).map((userId) => ({
+        userId,
+        agencyId: r.agencyId,
+        projectId: phase.project_id,
+        type: 'phase_ready' as const,
+        title: `Phase « ${sp.name} » envoyée en review`,
+        message: `${phase.name} › ${sp.name} — en attente de validation client.`,
+        link: adminLink,
+      })),
+    )
+
+    // Email client
+    if (r.clientEmail) {
+      void sendEmail({
+        to: r.clientEmail,
+        template: 'phase_ready',
+        data: {
+          projectName: r.projectName,
+          agencyName: r.agencyName,
+          phaseName: `${phase.name} › ${sp.name}`,
+        },
+        link: subPhaseLink ?? undefined,
+      })
+    }
+  })()
 
   revalidatePath(`/projects/${phase.project_id}`)
   revalidatePath(`/projects/${phase.project_id}/phases/${phase.id}/sub/${subPhaseId}`)
@@ -232,6 +283,36 @@ export async function approveSubPhase(subPhaseId: string): Promise<SubPhaseActio
     action: 'phase_approved',
     details: { phase_name: `${phase.name} › ${sp.name}` },
   })
+
+  // ── Notify client of approval ─────────────────────────────────────
+  void (async () => {
+    const r = await getProjectRecipients(phase.project_id)
+    if (!r.clientId) return
+
+    await createNotification({
+      userId: r.clientId,
+      agencyId: r.agencyId,
+      projectId: phase.project_id,
+      type: 'phase_approved',
+      title: `🎉 ${sp.name} a été approuvée`,
+      message: `${phase.name} — validée et terminée.`,
+      link: r.shareToken ? `/client/${r.shareToken}` : null,
+    })
+
+    if (r.clientEmail) {
+      void sendEmail({
+        to: r.clientEmail,
+        template: 'phase_approved',
+        data: {
+          projectName: r.projectName,
+          agencyName: r.agencyName,
+          phaseName: `${phase.name} › ${sp.name}`,
+          clientName: 'vous',
+        },
+        link: r.shareToken ? `/client/${r.shareToken}` : undefined,
+      })
+    }
+  })()
 
   revalidatePath(`/projects/${phase.project_id}`)
   revalidatePath(`/projects/${phase.project_id}/phases/${phase.id}/sub/${subPhaseId}`)

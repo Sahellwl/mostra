@@ -1,4 +1,5 @@
 import ClientPhaseCard from './ClientPhaseCard'
+import ProjectTimeline from '@/components/project/ProjectTimeline'
 import type { Project, ProjectPhase, SubPhase } from '@/lib/types'
 
 interface ClientProjectViewProps {
@@ -46,23 +47,10 @@ export default function ClientProjectView({ project, phases, subPhasesByPhase, t
           />
         </div>
 
-        {/* Indicateurs mini par phase */}
+        {/* Timeline des phases */}
         {phases.length > 0 && (
-          <div className="flex gap-1 mt-3">
-            {phases.map((phase) => {
-              const isDone = phase.status === 'completed' || phase.status === 'approved'
-              const isActive = phase.status === 'in_review' || phase.status === 'in_progress'
-              return (
-                <div
-                  key={phase.id}
-                  className="flex-1 h-1 rounded-full transition-colors"
-                  style={{
-                    backgroundColor: isDone ? '#22C55E' : isActive ? '#00D76B' : '#2a2a2a',
-                  }}
-                  title={phase.name}
-                />
-              )
-            })}
+          <div className="mt-4">
+            <ProjectTimeline phases={phases} subPhasesByPhase={subPhasesByPhase} />
           </div>
         )}
       </div>

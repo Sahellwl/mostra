@@ -3,6 +3,8 @@
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { db } from '@/lib/supabase/helpers'
+import { createNotifications, getProjectRecipients } from '@/lib/notifications'
+import { sendEmail } from '@/lib/email/send'
 import type { Project, ProjectPhase, SubPhase, MoodboardImageContent, Profile } from '@/lib/types'
 import type { BlockComment } from '@/lib/hooks/useRealtimeBlockComments'
 
@@ -395,6 +397,55 @@ export async function requestMoodboardRevisions(
     action: 'status_changed',
     details: { phase_name: 'Style', message: 'Demande de modifications client' },
   })
+
+  // ── Notify admins / PM (fire-and-forget) ─────────────────────────
+  void (async () => {
+    const r = await getProjectRecipients(project.id)
+    if (!r.projectName) return
+
+    const recipientIds = [
+      ...new Set([...r.adminIds, ...(r.projectManagerId ? [r.projectManagerId] : [])]),
+    ]
+    if (recipientIds.length === 0) return
+
+    const link = `/projects/${project.id}/phases/${phase.id}/sub/${subPhaseId}`
+    const notifTitle = `🔄 Révision demandée — Style`
+    const notifMsg = message.trim() || 'Le client a demandé des modifications.'
+
+    await createNotifications(
+      recipientIds.map((uid) => ({
+        userId: uid,
+        agencyId: r.agencyId,
+        projectId: project.id,
+        type: 'revision_requested' as const,
+        title: notifTitle,
+        message: notifMsg,
+        link,
+      })),
+    )
+
+    if (r.projectManagerId) {
+      const { data: pmRaw } = await createAdminClient()
+        .from('profiles')
+        .select('email')
+        .eq('id', r.projectManagerId)
+        .maybeSingle()
+      const pmEmail = (pmRaw as { email: string } | null)?.email
+      if (pmEmail) {
+        void sendEmail({
+          to: pmEmail,
+          template: 'revision_requested',
+          data: {
+            projectName: r.projectName,
+            agencyName: r.agencyName,
+            phaseName: 'Style',
+            clientName: 'Le client',
+          },
+          link,
+        })
+      }
+    }
+  })()
 
   revalidatePath(`/client/${token}`)
   revalidatePath(`/client/${token}/phases/${phase.id}/sub/${subPhaseId}`)

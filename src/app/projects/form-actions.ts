@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { db } from '@/lib/supabase/helpers'
 import { getCurrentMember } from '@/lib/supabase/queries'
+import { createNotifications, getProjectRecipients } from '@/lib/notifications'
 import type { FormTemplate, FormQuestionContent, SubPhase, ProjectPhase } from '@/lib/types'
 
 export type FormActionResult = { success: true } | { success: false; error: string }
@@ -237,6 +238,26 @@ export async function submitFormAnswers(
   revalidatePath(
     `/projects/${project.id}/phases/${parents.sp.phase_id}/sub/${subPhaseId}`,
   )
+
+  // ── Notify admins that client submitted the form ──────────────────
+  void (async () => {
+    const r = await getProjectRecipients(project.id)
+    if (!r.projectName) return
+
+    const adminLink = `/projects/${project.id}/phases/${parents.sp.phase_id}/sub/${subPhaseId}`
+
+    await createNotifications(
+      r.adminIds.map((userId) => ({
+        userId,
+        agencyId: r.agencyId,
+        projectId: project.id,
+        type: 'form_submitted' as const,
+        title: `📋 Formulaire soumis — ${r.projectName}`,
+        message: 'Le client a rempli et soumis le formulaire.',
+        link: adminLink,
+      })),
+    )
+  })()
 
   return { success: true }
 }

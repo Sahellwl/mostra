@@ -7,6 +7,7 @@ import { getCurrentMember, getProjectDetail, getAgencyMembersWithProfiles } from
 import StatusBadge from '@/components/shared/StatusBadge'
 import PhaseCard from '@/components/project/PhaseCard'
 import ProjectInfo from '@/components/project/ProjectInfo'
+import ProjectTimeline from '@/components/project/ProjectTimeline'
 import ActivityLog from '@/components/project/ActivityLog'
 import CommentSection from '@/components/project/CommentSection'
 import DangerZone from '@/components/project/DangerZone'
@@ -80,23 +81,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <StatusBadge status={project.status} className="flex-shrink-0 mt-0.5" />
           </div>
 
-          {/* Barre de progression globale */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] text-[#444444] uppercase tracking-widest">
-                Progression globale
-              </span>
-              <span className="text-xs font-medium text-white tabular-nums">
-                {project.progress}%
-              </span>
+          {/* Timeline des phases */}
+          {phases.length > 0 && (
+            <div className="mt-4">
+              <ProjectTimeline phases={phases} subPhasesByPhase={subPhasesByPhase} />
             </div>
-            <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#00D76B] rounded-full transition-all duration-500"
-                style={{ width: `${project.progress}%` }}
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Layout 2 colonnes */}

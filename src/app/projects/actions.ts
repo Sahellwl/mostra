@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { db } from '@/lib/supabase/helpers'
+import { createNotification } from '@/lib/notifications'
+import { sendEmail } from '@/lib/email/send'
 import type { PhaseTemplate, SubPhaseDefinition } from '@/lib/types'
 
 export type CreateProjectInput = {
@@ -226,6 +228,53 @@ export async function createProject(input: CreateProjectInput): Promise<CreatePr
       action: 'project_created',
       details: { project_name: proj.name },
     })
+
+  // ── Notify client of project creation ────────────────────────────
+  if (clientId) {
+    void (async () => {
+      // Fetch share_token for client link
+      const { data: rawProj } = await createAdminClient()
+        .from('projects')
+        .select('share_token')
+        .eq('id', proj.id)
+        .maybeSingle()
+      const shareToken = (rawProj as { share_token: string | null } | null)?.share_token
+
+      // Fetch agency name
+      const { data: rawAgency } = await supabase
+        .from('agencies')
+        .select('name')
+        .eq('id', agencyId)
+        .maybeSingle()
+      const agencyName = (rawAgency as { name: string } | null)?.name ?? 'votre agence'
+
+      await createNotification({
+        userId: clientId,
+        agencyId,
+        projectId: proj.id,
+        type: 'project_created',
+        title: `🚀 Votre projet « ${proj.name} » a démarré`,
+        message: `${agencyName} vient de créer votre projet.`,
+        link: shareToken ? `/client/${shareToken}` : null,
+      })
+
+      // Email client
+      const { data: rawProfile } = await createAdminClient()
+        .from('profiles')
+        .select('email')
+        .eq('id', clientId)
+        .maybeSingle()
+      const clientEmail = (rawProfile as { email: string } | null)?.email
+      if (clientEmail) {
+        void sendEmail({
+          to: clientEmail,
+          template: 'project_created',
+          data: { projectName: proj.name, agencyName },
+          link: shareToken ? `/client/${shareToken}` : undefined,
+        })
+      }
+    })()
+  }
 
   return { data: { id: proj.id, name: proj.name } }
 }

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Toaster } from 'sonner'
 import ClientLogout from './ClientLogout'
 import Logo from '@/components/shared/Logo'
+import NotificationBell from '@/components/shared/NotificationBell'
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   // Auth optionnelle — cette route est publique
@@ -28,6 +29,8 @@ export default async function ClientLayout({ children }: { children: React.React
           <div className="flex items-center gap-3">
             {user ? (
               <>
+                {/* Notification bell for authenticated clients */}
+                <NotificationBell userId={user.id} />
                 <Link
                   href="/client/dashboard"
                   className="

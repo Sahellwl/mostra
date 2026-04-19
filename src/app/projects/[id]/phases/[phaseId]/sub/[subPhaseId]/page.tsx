@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/supabase/helpers'
 import { getCurrentMember } from '@/lib/supabase/queries'
 import StatusBadge from '@/components/shared/StatusBadge'
+import RevisionAlert from '@/components/project/RevisionAlert'
 import SubPhaseActions from '@/components/project/SubPhaseActions'
 import FormSubPhaseAdmin from '@/components/project/FormSubPhaseAdmin'
 import ScriptEditor from '@/components/project/ScriptEditor'
@@ -144,6 +145,25 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
     idx === 0 ||
     (idx > 0 &&
       (siblings[idx - 1].status === 'completed' || siblings[idx - 1].status === 'approved'))
+
+  // Demande de révision — dernier commentaire "[Demande de modification]" sur cette sous-phase
+  // Affiché uniquement quand la sous-phase est revenue en in_progress après une review
+  let revisionMessage: string | null = null
+  if (subPhase.status === 'in_progress') {
+    const { data: rawRevComment } = await supabase
+      .from('comments')
+      .select('content')
+      .eq('sub_phase_id', params.subPhaseId)
+      .ilike('content', '[Demande de modification]%')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const raw = (rawRevComment as { content: string } | null)?.content
+    if (raw) {
+      revisionMessage = raw.replace(/^\[Demande de modification\]\s*/i, '').trim()
+    }
+  }
 
   const isFormSubPhase = FORM_SLUGS.includes(subPhase.slug)
   const isScriptSubPhase = SCRIPT_SLUGS.includes(subPhase.slug)
@@ -419,6 +439,11 @@ export default async function SubPhasePage({ params }: SubPhasePageProps) {
           </div>
           <StatusBadge status={subPhase.status} className="flex-shrink-0" />
         </div>
+
+        {/* Alerte demande de révision — visible quand la sous-phase revient en in_progress */}
+        {revisionMessage !== null && (
+          <RevisionAlert message={revisionMessage} />
+        )}
 
         {/* Actions standard — masquées pour formulaire, script, moodboard, storyboard, design et audio (gèrent leur propre workflow) */}
         {!isFormSubPhase && !isScriptSubPhase && !isMoodboardSubPhase && !isStoryboardSubPhase && !isDesignSubPhase && !isAudioSubPhase && (

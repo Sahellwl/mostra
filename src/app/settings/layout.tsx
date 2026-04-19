@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
+import AdminHeader from '@/components/dashboard/AdminHeader'
 import { Toaster } from 'sonner'
 import SettingsNav from './SettingsNav'
 
@@ -15,8 +16,9 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Sidebar />
+      <AdminHeader />
 
-      <main className="md:ml-[180px] min-h-screen">
+      <main className="md:ml-[180px] min-h-screen pt-14">
         <div className="px-4 md:px-8 py-8">
           <SettingsNav />
           {children}
