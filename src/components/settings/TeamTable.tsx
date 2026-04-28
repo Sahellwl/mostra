@@ -99,9 +99,9 @@ export default function TeamTable({ members, currentUserId, currentUserRole, isA
             <p className="text-sm text-[#444444]">Aucun membre dans cette catégorie.</p>
           </div>
         ) : (
-          <div className="divide-y divide-[#1a1a1a]">
+          <div className="divide-y divide-[#1a1a1a] overflow-x-auto">
             {/* Header */}
-            <div className="grid grid-cols-[1fr_100px_110px_80px_140px] gap-4 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium">
+            <div className="grid grid-cols-[1fr_100px_110px_80px_140px] gap-4 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium min-w-[640px]">
               <span>Membre</span>
               <span>Rôle</span>
               <span>Ajouté le</span>
@@ -116,7 +116,7 @@ export default function TeamTable({ members, currentUserId, currentUserRole, isA
               return (
                 <div
                   key={m.id}
-                  className="grid grid-cols-[1fr_100px_110px_80px_140px] gap-4 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors"
+                  className="grid grid-cols-[1fr_100px_110px_80px_140px] gap-4 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors min-w-[640px]"
                 >
                   {/* Identity */}
                   <div className="flex items-center gap-3 min-w-0">

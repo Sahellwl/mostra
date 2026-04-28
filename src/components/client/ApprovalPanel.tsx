@@ -124,17 +124,18 @@ function ApprovalForm({
       )}
 
       {/* Boutons d'action */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap">
         {/* Approuver */}
         <button
           type="button"
           onClick={handleApprove}
           disabled={isPending || mode === 'revision'}
           className="
-            inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
+            inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
             bg-[#22C55E]/10 border border-[#22C55E]/25 text-[#22C55E]
             hover:bg-[#22C55E]/20 transition-colors
             disabled:opacity-40 disabled:cursor-not-allowed
+            w-full sm:w-auto
           "
         >
           {isPending && mode === 'idle' ? (
@@ -152,10 +153,11 @@ function ApprovalForm({
             onClick={() => setMode('revision')}
             disabled={isPending}
             className="
-              inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
+              inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
               bg-[#F59E0B]/10 border border-[#F59E0B]/25 text-[#F59E0B]
               hover:bg-[#F59E0B]/20 transition-colors
               disabled:opacity-40 disabled:cursor-not-allowed
+              w-full sm:w-auto
             "
           >
             <RotateCcw className="h-4 w-4" />
@@ -168,10 +170,11 @@ function ApprovalForm({
               onClick={handleRevision}
               disabled={isPending || !message.trim()}
               className="
-                inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
+                inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
                 bg-[#F59E0B]/10 border border-[#F59E0B]/25 text-[#F59E0B]
                 hover:bg-[#F59E0B]/20 transition-colors
                 disabled:opacity-40 disabled:cursor-not-allowed
+                w-full sm:w-auto
               "
             >
               {isPending ? (
@@ -188,7 +191,7 @@ function ApprovalForm({
                 setMessage('')
               }}
               disabled={isPending}
-              className="text-xs text-[#555555] hover:text-white transition-colors"
+              className="text-xs text-[#555555] hover:text-white transition-colors w-full sm:w-auto text-center sm:text-left"
             >
               Annuler
             </button>

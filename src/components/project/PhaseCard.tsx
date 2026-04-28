@@ -318,7 +318,7 @@ function SubPhaseList({
           <div
             key={sp.id}
             className={`
-              flex items-center justify-between gap-3 px-3 py-2 rounded-lg border
+              flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-3 py-2 rounded-lg border
               ${
                 sp.status === 'in_progress' || sp.status === 'in_review'
                   ? 'bg-[#0a0a0a] border-[#2a2a2a]'
@@ -354,7 +354,7 @@ function SubPhaseList({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
               <StatusBadge status={sp.status} className="text-[10px]" />
 
               {/* Voir — toujours visible dès que la sp n'est pas pending */}

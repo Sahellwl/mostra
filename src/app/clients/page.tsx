@@ -27,8 +27,12 @@ export default async function ClientsPage() {
 
   const { member } = memberData
   const isAdmin = member.role === 'super_admin' || member.role === 'agency_admin'
+  const isCreative = member.role === 'creative'
 
-  const clients = await getClientsWithStats(member.agency_id)
+  const clients = await getClientsWithStats(
+    member.agency_id,
+    isCreative ? { creativeUserId: user.id } : undefined,
+  )
 
   // Stats
   const now = new Date()
@@ -88,9 +92,9 @@ export default async function ClientsPage() {
             }
           />
         ) : (
-          <div className="divide-y divide-[#1a1a1a]">
+          <div className="divide-y divide-[#1a1a1a] overflow-x-auto">
             {/* En-tête de tableau */}
-            <div className="grid grid-cols-[1fr_120px_120px_100px] gap-4 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium">
+            <div className="grid grid-cols-[1fr_120px_120px_100px] gap-4 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium min-w-[640px]">
               <span>Client</span>
               <span>Projets actifs</span>
               <span>Ajouté le</span>
@@ -100,7 +104,7 @@ export default async function ClientsPage() {
             {clients.map((client) => (
               <div
                 key={client.userId}
-                className="grid grid-cols-[1fr_120px_120px_100px] gap-4 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors"
+                className="grid grid-cols-[1fr_120px_120px_100px] gap-4 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors min-w-[640px]"
               >
                 {/* Identité */}
                 <div className="flex items-center gap-3 min-w-0">

@@ -8,17 +8,18 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import Logo from '@/components/shared/Logo'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/clients', label: 'Clients', icon: Users },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
+  { href: '/clients', label: 'Clients', icon: Users, adminOnly: false },
+  { href: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { signOut, isSuperAdmin } = useAuth()
+  const { signOut, isSuperAdmin, isAdmin } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const close = () => setMobileOpen(false)
+  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
 
   return (
     <>
@@ -64,7 +65,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {visibleItems.map(({ href, label, icon: Icon }) => {
             const isActive =
               href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
 

@@ -43,14 +43,27 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   // Sécurité : le projet doit appartenir à l'agence de l'utilisateur
   if (data.project.agency_id !== membership.agency?.id) notFound()
 
-  const { project, client, projectManager, phases, subPhasesByPhase, filesByPhase, comments, activity } = data
   const userRole = membership.member.role
   const isAdmin = userRole === 'super_admin' || userRole === 'agency_admin'
 
-  // Membres clients de l'agence pour le sélecteur d'assignation
-  const clientMembers = isAdmin
-    ? await getAgencyMembersWithProfiles(supabase, membership.agency?.id ?? '', ['client'])
-    : []
+  // Créatif : seulement ses projets assignés
+  if (userRole === 'creative' && data.project.project_manager_id !== user.id) {
+    notFound()
+  }
+
+  const { project, client, projectManager, phases, subPhasesByPhase, filesByPhase, comments, activity } = data
+
+  // Membres clients + admins/créatifs de l'agence pour les sélecteurs d'assignation
+  const [clientMembers, pmMembers] = isAdmin
+    ? await Promise.all([
+        getAgencyMembersWithProfiles(supabase, membership.agency?.id ?? '', ['client']),
+        getAgencyMembersWithProfiles(supabase, membership.agency?.id ?? '', [
+          'super_admin',
+          'agency_admin',
+          'creative',
+        ]),
+      ])
+    : [[], []]
 
   const availableClients = clientMembers.map((m) => ({
     userId: m.userId,
@@ -58,8 +71,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     email: m.profile.email,
   }))
 
+  const availablePMs = pmMembers.map((m) => ({
+    userId: m.userId,
+    fullName: m.profile.full_name,
+    email: m.profile.email,
+    role: m.role,
+  }))
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] px-6 py-8">
+    <div className="min-h-screen bg-[#0a0a0a] px-4 sm:px-6 py-6 sm:py-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Back + Header */}
         <div>
@@ -142,6 +162,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               projectManager={projectManager}
               isAdmin={isAdmin}
               availableClients={availableClients}
+              availablePMs={availablePMs}
             />
             <ActivityLog activity={activity} projectId={project.id} />
             {(userRole === 'super_admin' || userRole === 'agency_admin') && (

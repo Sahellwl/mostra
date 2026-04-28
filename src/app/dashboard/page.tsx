@@ -24,13 +24,15 @@ export default async function DashboardPage() {
     redirect('/onboarding')
   }
 
-  const { member, agency } = memberData
+  const { member } = memberData
   const agencyId = member.agency_id
+  const isCreative = member.role === 'creative'
+  const filterOpts = isCreative ? { creativeUserId: user.id } : undefined
 
   const [projects, stats] = await Promise.all([
-    getProjects(supabase, agencyId),
-    getProjectStats(supabase, agencyId),
+    getProjects(supabase, agencyId, filterOpts),
+    getProjectStats(supabase, agencyId, filterOpts),
   ])
 
-  return <DashboardClient projects={projects} stats={stats} />
+  return <DashboardClient projects={projects} stats={stats} role={member.role} />
 }

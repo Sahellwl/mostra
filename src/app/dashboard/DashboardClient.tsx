@@ -7,14 +7,16 @@ import StatsCards from '@/components/dashboard/StatsCards'
 import ProjectCard from '@/components/dashboard/ProjectCard'
 import ProjectFilters, { type FilterTab } from '@/components/dashboard/ProjectFilters'
 import { EmptyState } from '@/components/shared/EmptyState'
-import type { ProjectSummary } from '@/lib/types'
+import type { ProjectSummary, UserRole } from '@/lib/types'
 
 interface Props {
   projects: ProjectSummary[]
   stats: { total: number; active: number; completed: number }
+  role: UserRole
 }
 
-export default function DashboardClient({ projects, stats }: Props) {
+export default function DashboardClient({ projects, stats, role }: Props) {
+  const canCreate = role === 'super_admin' || role === 'agency_admin'
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all')
   const [search, setSearch] = useState('')
 
@@ -31,13 +33,24 @@ export default function DashboardClient({ projects, stats }: Props) {
           <h1 className="text-xl font-semibold text-white">Dashboard</h1>
           <p className="text-sm text-[#666666] mt-0.5">Gérez vos projets de production vidéo</p>
         </div>
-        <Link
-          href="/projects/new"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Nouveau projet
-        </Link>
+        {canCreate && (
+          <Link
+            href="/projects/new"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau projet
+          </Link>
+        )}
+        {canCreate && (
+          <Link
+            href="/projects/new"
+            aria-label="Nouveau projet"
+            className="sm:hidden flex items-center justify-center w-9 h-9 rounded-lg bg-[#00D76B] text-white hover:bg-[#00C061] transition-colors flex-shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+          </Link>
+        )}
       </div>
 
       <StatsCards {...stats} />

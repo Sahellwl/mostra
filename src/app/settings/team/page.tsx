@@ -125,9 +125,9 @@ export default async function TeamSettingsPage() {
             {pendingInvitations.length === 0 ? (
               <EmptyState icon={Clock} title="Aucune invitation en attente." />
             ) : (
-              <div className="divide-y divide-[#1a1a1a]">
+              <div className="divide-y divide-[#1a1a1a] overflow-x-auto">
                 {/* Header */}
-                <div className="grid grid-cols-[1fr_80px_100px_110px_160px_80px] gap-3 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium">
+                <div className="grid grid-cols-[1fr_80px_100px_110px_160px_80px] gap-3 px-5 py-2.5 text-[10px] text-[#444444] uppercase tracking-widest font-medium min-w-[700px]">
                   <span>Email</span>
                   <span>Rôle</span>
                   <span>Envoyée le</span>
@@ -141,7 +141,7 @@ export default async function TeamSettingsPage() {
                   return (
                     <div
                       key={inv.id}
-                      className="grid grid-cols-[1fr_80px_100px_110px_160px_80px] gap-3 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors"
+                      className="grid grid-cols-[1fr_80px_100px_110px_160px_80px] gap-3 px-5 py-3.5 items-center hover:bg-[#161616] transition-colors min-w-[700px]"
                     >
                       {/* Email */}
                       <div className="flex items-center gap-2 min-w-0">

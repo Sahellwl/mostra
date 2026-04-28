@@ -486,3 +486,104 @@ export async function assignClient(
   revalidatePath(`/projects/${projectId}`)
   return { success: true }
 }
+
+// ── assignProjectManager ─────────────────────────────────────────
+// Assigne (ou retire) le PM d'un projet. Le PM doit être un membre
+// actif de l'agence avec le rôle 'agency_admin', 'super_admin' ou 'creative'.
+
+export async function assignProjectManager(
+  projectId: string,
+  pmUserId: string | null,
+): Promise<ProjectActionResult> {
+  const supabase = createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Non authentifié.' }
+
+  const { data: rawMember } = await supabase
+    .from('agency_members')
+    .select('agency_id, role')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .order('invited_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!rawMember) return { success: false, error: 'Membre introuvable.' }
+  const member = rawMember as { agency_id: string; role: string }
+
+  if (member.role !== 'super_admin' && member.role !== 'agency_admin') {
+    return { success: false, error: 'Permissions insuffisantes.' }
+  }
+
+  // Récupère le projet pour la notification + cohérence agence
+  const { data: rawProject } = await supabase
+    .from('projects')
+    .select('id, name, agency_id, project_manager_id')
+    .eq('id', projectId)
+    .maybeSingle()
+
+  const project = rawProject as
+    | { id: string; name: string; agency_id: string; project_manager_id: string | null }
+    | null
+  if (!project) return { success: false, error: 'Projet introuvable.' }
+  if (project.agency_id !== member.agency_id) {
+    return { success: false, error: 'Accès refusé.' }
+  }
+
+  // Vérifie l'éligibilité du nouveau PM
+  if (pmUserId) {
+    const { data: pmMember } = await supabase
+      .from('agency_members')
+      .select('role')
+      .eq('user_id', pmUserId)
+      .eq('agency_id', member.agency_id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const pm = pmMember as { role: string } | null
+    if (!pm) {
+      return { success: false, error: 'Utilisateur introuvable dans cette agence.' }
+    }
+    if (pm.role !== 'agency_admin' && pm.role !== 'super_admin' && pm.role !== 'creative') {
+      return { success: false, error: 'Ce membre ne peut pas être PM.' }
+    }
+  }
+
+  const { error } = await db(supabase)
+    .from('projects')
+    .update({ project_manager_id: pmUserId })
+    .eq('id', projectId)
+    .eq('agency_id', member.agency_id)
+
+  if (error) return { success: false, error: error.message }
+
+  // Activity log
+  await db(supabase)
+    .from('activity_logs')
+    .insert({
+      project_id: projectId,
+      user_id: user.id,
+      action: 'pm_assigned',
+      details: { project_manager_id: pmUserId },
+    })
+
+  // Notification au nouveau PM (si nouveau et différent de l'auteur)
+  if (pmUserId && pmUserId !== project.project_manager_id && pmUserId !== user.id) {
+    void createNotification({
+      userId: pmUserId,
+      agencyId: member.agency_id,
+      projectId: project.id,
+      type: 'member_joined',
+      title: `Vous êtes PM du projet « ${project.name} »`,
+      message: 'Vous avez été assigné comme Project Manager.',
+      link: `/projects/${project.id}`,
+    })
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/projects/${projectId}`)
+  return { success: true }
+}

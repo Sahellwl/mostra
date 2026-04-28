@@ -49,11 +49,16 @@ export async function getCurrentMember(supabase: Client, userId: string) {
 // Stats dashboard
 // ─────────────────────────────────────────────────────────────────
 
-export async function getProjectStats(supabase: Client, agencyId: string) {
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('agency_id', agencyId)
+export async function getProjectStats(
+  supabase: Client,
+  agencyId: string,
+  options?: { creativeUserId?: string },
+) {
+  let query = supabase.from('projects').select('*').eq('agency_id', agencyId)
+  if (options?.creativeUserId) {
+    query = query.eq('project_manager_id', options.creativeUserId)
+  }
+  const { data, error } = await query
 
   if (error || !data) return { total: 0, active: 0, completed: 0 }
 
@@ -76,12 +81,19 @@ type ProjectRow = Project & {
 export async function getProjects(
   supabase: Client,
   agencyId: string,
+  options?: { creativeUserId?: string },
 ): Promise<ProjectSummary[]> {
-  const { data: rawProjects, error } = await supabase
+  let query = supabase
     .from('projects')
     .select('*, project_phases(*)')
     .eq('agency_id', agencyId)
     .order('updated_at', { ascending: false })
+
+  if (options?.creativeUserId) {
+    query = query.eq('project_manager_id', options.creativeUserId)
+  }
+
+  const { data: rawProjects, error } = await query
 
   if (error || !rawProjects) return []
 

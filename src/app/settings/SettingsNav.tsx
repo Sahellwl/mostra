@@ -15,7 +15,7 @@ export default function SettingsNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex items-center gap-1 border-b border-[#1a1a1a] mb-6 -mt-2">
+    <nav className="flex items-center gap-1 border-b border-[#1a1a1a] mb-6 -mt-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {NAV.map(({ label, href, disabled }) => {
         const isActive = href === '/settings'
           ? pathname === '/settings'
@@ -25,7 +25,7 @@ export default function SettingsNav() {
           return (
             <span
               key={href}
-              className="px-3 py-2.5 text-sm text-[#333333] cursor-not-allowed select-none"
+              className="px-3 py-2.5 text-sm text-[#333333] cursor-not-allowed select-none whitespace-nowrap flex-shrink-0"
             >
               {label}
             </span>
@@ -37,7 +37,7 @@ export default function SettingsNav() {
             key={href}
             href={href}
             className={`
-              px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+              px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex-shrink-0
               ${isActive
                 ? 'border-[#00D76B] text-white'
                 : 'border-transparent text-[#666666] hover:text-[#a0a0a0]'}

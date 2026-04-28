@@ -16,17 +16,17 @@ export default async function ClientLayout({ children }: { children: React.React
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* ── Header ────────────────────────────────────────────────── */}
       <header className="border-b border-[#1a1a1a] bg-[#0a0a0a]/80 backdrop-blur sticky top-0 z-30">
-        <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 select-none">
-            <Logo variant="full" color="white" className="h-7" />
+          <Link href="/" className="flex items-center gap-2.5 select-none min-w-0">
+            <Logo variant="full" color="white" className="h-7 flex-shrink-0" />
             <span className="text-[10px] text-[#444444] uppercase tracking-widest font-medium hidden sm:block">
               Client
             </span>
           </Link>
 
           {/* Actions droite */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {user ? (
               <>
                 {/* Notification bell for authenticated clients */}
@@ -35,10 +35,12 @@ export default async function ClientLayout({ children }: { children: React.React
                   href="/client/dashboard"
                   className="
                     text-xs text-[#666666] hover:text-white transition-colors
-                    px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:border-[#444444]
+                    px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:border-[#444444]
+                    whitespace-nowrap
                   "
                 >
-                  Mes projets
+                  <span className="hidden sm:inline">Mes projets</span>
+                  <span className="sm:hidden">Projets</span>
                 </Link>
                 <ClientLogout />
               </>
@@ -47,7 +49,8 @@ export default async function ClientLayout({ children }: { children: React.React
                 href="/login"
                 className="
                   text-xs text-[#666666] hover:text-white transition-colors
-                  px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:border-[#444444]
+                  px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#2a2a2a] hover:border-[#444444]
+                  whitespace-nowrap
                 "
               >
                 Se connecter
@@ -58,7 +61,7 @@ export default async function ClientLayout({ children }: { children: React.React
       </header>
 
       {/* ── Contenu ───────────────────────────────────────────────── */}
-      <main className="max-w-[1200px] mx-auto px-6 py-8">{children}</main>
+      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8">{children}</main>
 
       <Toaster
         theme="dark"

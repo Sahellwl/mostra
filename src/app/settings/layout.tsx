@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentMember } from '@/lib/supabase/queries'
 import Sidebar from '@/components/dashboard/Sidebar'
 import AdminHeader from '@/components/dashboard/AdminHeader'
 import { Toaster } from 'sonner'
@@ -12,6 +13,12 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
+
+  const memberData = await getCurrentMember(supabase, user.id)
+  const role = memberData?.member.role
+  if (role !== 'super_admin' && role !== 'agency_admin') {
+    redirect('/dashboard')
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">

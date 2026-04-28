@@ -58,12 +58,13 @@ import type { PhaseStatus, UserRole } from '@/lib/types'
 
 // ── Column grid classes (static for Tailwind) ─────────────────────
 
+// Responsive : sur mobile max 2 cols, à partir de md on respecte le choix admin
 const GRID_COLS: Record<number, string> = {
   1: 'grid-cols-1',
   2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
-  5: 'grid-cols-5',
+  3: 'grid-cols-2 md:grid-cols-3',
+  4: 'grid-cols-2 md:grid-cols-4',
+  5: 'grid-cols-2 md:grid-cols-5',
 }
 
 // ── Props ─────────────────────────────────────────────────────────

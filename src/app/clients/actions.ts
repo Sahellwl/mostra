@@ -215,17 +215,45 @@ export interface ClientWithStats {
   lastProjectName: string | null
 }
 
-export async function getClientsWithStats(agencyId: string): Promise<ClientWithStats[]> {
+export async function getClientsWithStats(
+  agencyId: string,
+  options?: { creativeUserId?: string },
+): Promise<ClientWithStats[]> {
   const supabase = createClient()
 
+  // Si créatif : ne retourner que les clients des projets où il est PM
+  let allowedClientIds: Set<string> | null = null
+  if (options?.creativeUserId) {
+    const { data: pmProjects } = await supabase
+      .from('projects')
+      .select('client_id')
+      .eq('agency_id', agencyId)
+      .eq('project_manager_id', options.creativeUserId)
+      .not('client_id', 'is', null)
+
+    allowedClientIds = new Set(
+      ((pmProjects as { client_id: string | null }[] | null) ?? [])
+        .map((p) => p.client_id)
+        .filter(Boolean) as string[],
+    )
+
+    if (allowedClientIds.size === 0) return []
+  }
+
   // 1. Membres clients actifs
-  const { data: members } = await supabase
+  let memberQuery = supabase
     .from('agency_members')
     .select('id, user_id, accepted_at')
     .eq('agency_id', agencyId)
     .eq('role', 'client')
     .eq('is_active', true)
     .order('accepted_at', { ascending: false })
+
+  if (allowedClientIds) {
+    memberQuery = memberQuery.in('user_id', Array.from(allowedClientIds))
+  }
+
+  const { data: members } = await memberQuery
 
   if (!members?.length) return []
 
@@ -244,11 +272,15 @@ export async function getClientsWithStats(agencyId: string): Promise<ClientWithS
     profileMap.set(p.id, p),
   )
 
-  // 3. Projets par client
-  const { data: projects } = await supabase
+  // 3. Projets par client (filtrés au PM si créatif)
+  let projectQuery = supabase
     .from('projects')
     .select('id, name, status, client_id')
     .in('client_id', userIds)
+  if (options?.creativeUserId) {
+    projectQuery = projectQuery.eq('project_manager_id', options.creativeUserId)
+  }
+  const { data: projects } = await projectQuery
 
   const projectsByClient = new Map<string, { name: string; active: boolean }[]>()
   ;(projects as { id: string; name: string; status: string; client_id: string }[] | null)?.forEach(

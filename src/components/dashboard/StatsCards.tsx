@@ -32,7 +32,7 @@ const CARDS = (stats: StatsCardsProps) => [
 
 export default function StatsCards(props: StatsCardsProps) {
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
       {CARDS(props).map((card) => {
         const Icon = card.icon
         return (
