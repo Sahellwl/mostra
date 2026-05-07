@@ -638,9 +638,6 @@ export default function FormSubPhaseAdmin({
             <div key={block.id} className="px-5 py-4">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-[10px] text-[#333333] font-mono">{i + 1}</span>
-                <span className="text-[10px] text-[#333333] uppercase tracking-widest">
-                  {block.content.type}
-                </span>
               </div>
 
               {/* Admin can fill answers when pending or in_progress */}
