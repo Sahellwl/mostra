@@ -4,10 +4,11 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CheckCircle, Loader2, Lock } from 'lucide-react'
+import { Check, CheckCircle, Loader2, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { saveDraftAnswer, submitFormAnswers } from '@/app/projects/form-actions'
 import type { FormQuestionContent } from '@/lib/types'
+import { parseCheckboxAnswer, serializeCheckboxAnswer } from '@/lib/utils/form-answers'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -32,7 +33,16 @@ function buildSchema(blocks: FormBlock[]) {
     const { required, type } = block.content
     let field: z.ZodTypeAny
 
-    if (type === 'number') {
+    if (type === 'checkbox') {
+      // Stored as a JSON string; validate by parsing.
+      field = z.string()
+      if (required) {
+        field = (field as z.ZodString).refine(
+          (val) => parseCheckboxAnswer(val).length > 0,
+          { message: 'Sélectionnez au moins une option' },
+        )
+      }
+    } else if (type === 'number') {
       field = z.string()
       if (required) {
         field = (field as z.ZodString).min(1, 'Ce champ est requis')
@@ -81,6 +91,27 @@ function FormField({
     'w-full bg-[#111111] border border-[#1e1e1e] rounded-xl px-3 py-2.5 text-sm text-[#aaaaaa] cursor-default'
 
   if (readOnly) {
+    // Checkbox read-only: parse JSON and display as list
+    if (content.type === 'checkbox') {
+      const selected = parseCheckboxAnswer(value)
+      return (
+        <div className={`${readOnlyBase} min-h-[42px]`}>
+          {selected.length > 0 ? (
+            <ul className="space-y-1">
+              {selected.map((s, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <Check className="h-3 w-3 text-[#00D76B] flex-shrink-0" strokeWidth={3} />
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-[#333333] italic">Pas de réponse</span>
+          )}
+        </div>
+      )
+    }
+
     const hasAnswer = value !== '' && value !== null
     return (
       <div className={`${readOnlyBase} min-h-[42px] whitespace-pre-wrap`}>
@@ -89,6 +120,44 @@ function FormField({
         ) : (
           <span className="text-[#333333] italic">Pas de réponse</span>
         )}
+      </div>
+    )
+  }
+
+  if (content.type === 'checkbox') {
+    const selected = parseCheckboxAnswer(value)
+
+    function toggle(opt: string) {
+      const next = selected.includes(opt)
+        ? selected.filter((v) => v !== opt)
+        : [...selected, opt]
+      onChange(serializeCheckboxAnswer(next))
+      onBlur()
+    }
+
+    return (
+      <div className="space-y-2">
+        {(content.options ?? []).map((opt) => {
+          const checked = selected.includes(opt)
+          return (
+            <label
+              key={opt}
+              className="flex items-center gap-3 cursor-pointer group"
+              onClick={() => toggle(opt)}
+            >
+              <div
+                className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  checked
+                    ? 'border-[#00D76B] bg-[#00D76B]'
+                    : 'border-[#2a2a2a] group-hover:border-[#555555]'
+                }`}
+              >
+                {checked && <Check className="h-2.5 w-2.5 text-black" strokeWidth={3} />}
+              </div>
+              <span className="text-sm text-[#cccccc]">{opt}</span>
+            </label>
+          )
+        })}
       </div>
     )
   }

@@ -33,6 +33,7 @@ import {
   AlignLeft,
   List,
   CircleDot,
+  CheckSquare,
   Type,
   X,
 } from 'lucide-react'
@@ -61,6 +62,7 @@ const QUESTION_TYPES: { value: QuestionType; label: string; icon: React.Componen
   { value: 'textarea', label: 'Texte long', icon: AlignLeft },
   { value: 'select', label: 'Liste déroulante', icon: List },
   { value: 'radio', label: 'Choix unique', icon: CircleDot },
+  { value: 'checkbox', label: 'Choix multiple', icon: CheckSquare },
   { value: 'number', label: 'Nombre', icon: Hash },
   { value: 'date', label: 'Date', icon: Calendar },
 ]
@@ -117,7 +119,7 @@ function SortableQuestionItem({
 
   const typeInfo = QUESTION_TYPES.find((t) => t.value === row.type)
   const TypeIcon = typeInfo?.icon ?? Type
-  const hasOptions = row.type === 'select' || row.type === 'radio'
+  const hasOptions = row.type === 'select' || row.type === 'radio' || row.type === 'checkbox'
 
   function addOption() {
     onUpdate(row._key, { options: [...(row.options ?? []), ''] })
@@ -293,6 +295,8 @@ function SortableQuestionItem({
                       <div className="flex-shrink-0 text-[#333333]">
                         {row.type === 'radio' ? (
                           <CircleDot className="h-3.5 w-3.5" />
+                        ) : row.type === 'checkbox' ? (
+                          <CheckSquare className="h-3.5 w-3.5" />
                         ) : (
                           <List className="h-3.5 w-3.5" />
                         )}
@@ -412,6 +416,20 @@ function FormPreview({ name, questions }: { name: string; questions: QuestionRow
               {(q.options ?? []).map((opt, j) => (
                 <label key={j} className="flex items-center gap-2 cursor-default">
                   <div className="w-3.5 h-3.5 rounded-full border border-[#2a2a2a] bg-[#111111] flex-shrink-0" />
+                  <span className="text-xs text-[#555555]">{opt}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {q.type === 'checkbox' && (
+            <div className="space-y-1.5">
+              {(q.options ?? []).length === 0 && (
+                <p className="text-[11px] text-[#333333] italic">Aucune option définie</p>
+              )}
+              {(q.options ?? []).map((opt, j) => (
+                <label key={j} className="flex items-center gap-2 cursor-default">
+                  <div className="w-3.5 h-3.5 rounded-sm border border-[#2a2a2a] bg-[#111111] flex-shrink-0" />
                   <span className="text-xs text-[#555555]">{opt}</span>
                 </label>
               ))}

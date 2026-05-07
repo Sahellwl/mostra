@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Loader2,
   RotateCcw,
+  Check,
   CheckCircle,
   Clock,
   Send,
@@ -29,6 +30,7 @@ import {
   approveSubPhase,
 } from '@/app/projects/sub-phase-actions'
 import type { FormTemplate, FormQuestionContent, PhaseStatus, QuestionType } from '@/lib/types'
+import { parseCheckboxAnswer, serializeCheckboxAnswer } from '@/lib/utils/form-answers'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -55,6 +57,7 @@ const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: 'date', label: 'Date' },
   { value: 'select', label: 'Choix (liste)' },
   { value: 'radio', label: 'Choix unique' },
+  { value: 'checkbox', label: 'Choix multiple' },
 ]
 
 // ── AdminAnswerField ───────────────────────────────────────────────
@@ -81,6 +84,67 @@ function AdminAnswerField({
   const isLong = block.content.type === 'textarea'
   const hasAnswer = value.trim() !== ''
 
+  // ── Checkbox: multi-select UI ──────────────────────────────────────
+  if (block.content.type === 'checkbox') {
+    const selectedValues = parseCheckboxAnswer(value)
+    const hasAnySelected = selectedValues.length > 0
+
+    function handleCheckboxToggle(opt: string) {
+      const next = selectedValues.includes(opt)
+        ? selectedValues.filter((v) => v !== opt)
+        : [...selectedValues, opt]
+      const serialized = serializeCheckboxAnswer(next)
+      setValue(serialized)
+      void (async () => {
+        setSaving(true)
+        await onSave(block.id, serialized)
+        setSaving(false)
+      })()
+    }
+
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-start gap-2">
+          <p className="text-xs font-medium text-[#cccccc] flex-1">
+            {block.content.label}
+            {block.content.required && <span className="text-red-400 ml-1">*</span>}
+          </p>
+          {hasAnySelected && !saving && (
+            <CheckCircle className="h-3.5 w-3.5 text-[#00D76B] flex-shrink-0 mt-0.5" />
+          )}
+          {saving && <Loader2 className="h-3.5 w-3.5 text-[#555555] animate-spin flex-shrink-0 mt-0.5" />}
+        </div>
+        {block.content.helpText && (
+          <p className="text-[11px] text-[#444444]">{block.content.helpText}</p>
+        )}
+        <div className="space-y-2">
+          {(block.content.options ?? []).map((opt) => {
+            const checked = selectedValues.includes(opt)
+            return (
+              <label
+                key={opt}
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={() => handleCheckboxToggle(opt)}
+              >
+                <div
+                  className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    checked
+                      ? 'border-[#00D76B] bg-[#00D76B]'
+                      : 'border-[#2a2a2a] group-hover:border-[#555555]'
+                  }`}
+                >
+                  {checked && <Check className="h-2.5 w-2.5 text-black" strokeWidth={3} />}
+                </div>
+                <span className="text-sm text-[#cccccc]">{opt}</span>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Texte / textarea : champ éditable ─────────────────────────────
   return (
     <div className="space-y-1.5">
       <div className="flex items-start gap-2">
@@ -232,6 +296,51 @@ function QuestionEditRow({
 
 function AnswerDisplay({ block }: { block: FormBlock }) {
   const { content } = block
+
+  // ── Checkbox: list display ─────────────────────────────────────────
+  if (content.type === 'checkbox') {
+    const selected = parseCheckboxAnswer(content.answer)
+    const hasSelections = selected.length > 0
+
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-start gap-2">
+          <p className="text-xs font-medium text-[#cccccc] flex-1">
+            {content.label}
+            {content.required && <span className="text-red-400 ml-1">*</span>}
+          </p>
+          {hasSelections && (
+            <CheckCircle className="h-3.5 w-3.5 text-[#00D76B] flex-shrink-0 mt-0.5" />
+          )}
+        </div>
+        {content.helpText && (
+          <p className="text-[11px] text-[#444444]">{content.helpText}</p>
+        )}
+        <div
+          className={`rounded-lg px-3 py-2.5 text-sm ${
+            hasSelections
+              ? 'bg-[#111111] border border-[#2a2a2a]'
+              : 'bg-[#0d0d0d] border border-dashed border-[#2a2a2a] text-[#333333] italic'
+          }`}
+        >
+          {hasSelections ? (
+            <ul className="space-y-1">
+              {selected.map((item, i) => (
+                <li key={i} className="flex items-center gap-2 text-white">
+                  <span className="text-[#00D76B] flex-shrink-0">•</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            'Aucune réponse'
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Autres types : affichage texte brut ───────────────────────────
   const hasAnswer = content.answer !== null && content.answer !== ''
 
   return (

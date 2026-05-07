@@ -6,7 +6,7 @@ import type { FormQuestion } from '@/lib/types'
 export const QuestionSchema = z.object({
   id: z.string(),
   label: z.string().min(1, 'Le libellé est requis'),
-  type: z.enum(['text', 'textarea', 'select', 'radio', 'number', 'date']),
+  type: z.enum(['text', 'textarea', 'select', 'radio', 'checkbox', 'number', 'date']),
   required: z.boolean(),
   options: z.array(z.string()).optional(),
   placeholder: z.string().optional(),

@@ -212,7 +212,7 @@ export interface Invitation {
 // Block content types (contenu JSON typé par type de bloc)
 // ----------------------------------------------------------
 
-export type QuestionType = 'text' | 'textarea' | 'select' | 'radio' | 'number' | 'date'
+export type QuestionType = 'text' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'number' | 'date'
 
 export interface FormQuestion {
   id: string
